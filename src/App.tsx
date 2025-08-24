@@ -1,8 +1,12 @@
-function App(){
-  return(
-    <div>
-      <h1>App</h1>
-    </div>
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<App />} />
+      </Routes>
+    </Router>
   )
 }
 
