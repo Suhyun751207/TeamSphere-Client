@@ -1,0 +1,668 @@
+{
+    "기본": [
+        {
+            "method": "GET",
+            "endpoint": "http://localhost:8080/v1/",
+            "requestBody": null,
+            "responseData": {
+                "message": "test"
+            },
+            "description": "서버 상태 확인"
+        }
+    ],
+    "인증(Auth)": [
+        {
+            "method": "POST",
+            "endpoint": "/v1/auth/signup",
+            "requestBody": {
+                "email": "",
+                "password": ""
+            },
+            "responseData": {
+                "success": true,
+                "message": "",
+                "user": {}
+            },
+            "description": "회원가입"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/auth/login",
+            "requestBody": {
+                "email": "",
+                "password": ""
+            },
+            "responseData": {
+                "success": true,
+                "message": "",
+                "user": {},
+                "setCookie": true
+            },
+            "description": "로그인"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/auth/logout",
+            "requestBody": null,
+            "responseData": {
+                "success": true,
+                "message": "",
+                "deleteCookie": true
+            },
+            "description": "로그아웃"
+        }
+    ],
+    "사용자(User)": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/user/",
+            "requestBody": null,
+            "responseData": {
+                "user": {}
+            },
+            "description": "사용자 정보 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/user/",
+            "requestBody": {
+                "password": "",
+                "newPassword": ""
+            },
+            "responseData": {
+                "success": true,
+                "message": ""
+            },
+            "description": "비밀번호 변경 (로그인 상태)"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/user/notlogin",
+            "requestBody": {
+                "email": "",
+                "password": "",
+                "newPassword": ""
+            },
+            "responseData": {
+                "success": true,
+                "message": ""
+            },
+            "description": "비밀번호 변경 (비로그인 상태)"
+        }
+    ],
+    "프로필(Profile)": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/user/profile/",
+            "requestBody": null,
+            "responseData": {
+                "user": {},
+                "profile": {}
+            },
+            "description": "프로필 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/user/profile/",
+            "requestBody": {
+                "name": "",
+                "age": 0,
+                "gender": "",
+                "phone": "",
+                "imagePath": ""
+            },
+            "responseData": {
+                "success": true,
+                "message": ""
+            },
+            "description": "프로필 생성"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/user/profile/:profileId",
+            "requestBody": null,
+            "responseData": {
+                "user": {},
+                "profile": {}
+            },
+            "description": "특정 프로필 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/user/profile/:profileId",
+            "requestBody": {
+                "name": "",
+                "age": 0,
+                "gender": "",
+                "phone": "",
+                "imagePath": ""
+            },
+            "responseData": {
+                "success": true,
+                "message": ""
+            },
+            "description": "프로필 수정"
+        }
+    ],
+    "워크스페이스": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/",
+            "requestBody": null,
+            "responseData": [],
+            "description": "참여 중인 워크스페이스 목록"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/",
+            "requestBody": {
+                "name": "",
+                "description": ""
+            },
+            "responseData": {
+                "workspace": {},
+                "workspaceMember": {}
+            },
+            "description": "워크스페이스 생성"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId",
+            "requestBody": null,
+            "responseData": {
+                "workspace": {},
+                "workspaceMember": {}
+            },
+            "description": "워크스페이스 정보 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/workspace/:workspaceId",
+            "requestBody": {
+                "name": "",
+                "description": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "워크스페이스 수정"
+        }
+    ],
+    "워크스페이스 멤버": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/members",
+            "requestBody": null,
+            "responseData": [],
+            "description": "워크스페이스 멤버 목록"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/members",
+            "requestBody": {
+                "userId": "",
+                "role": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "워크스페이스 멤버 추가"
+        }
+    ],
+    "활동 로그": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/activityLog",
+            "requestBody": null,
+            "responseData": [],
+            "description": "활동 로그 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/activityLog",
+            "requestBody": {
+                "action": "",
+                "description": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "활동 로그 생성"
+        }
+    ],
+    "팀 관리": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams",
+            "requestBody": null,
+            "responseData": [],
+            "description": "팀 목록"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams",
+            "requestBody": {
+                "name": ""
+            },
+            "responseData": {
+                "teamResult": {},
+                "teamUsersResult": []
+            },
+            "description": "팀 생성"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId",
+            "requestBody": null,
+            "responseData": {
+                "team": {},
+                "teamMember": []
+            },
+            "description": "특정 팀 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId",
+            "requestBody": {
+                "name": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "팀 수정"
+        }
+    ],
+    "팀 멤버": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members",
+            "requestBody": null,
+            "responseData": [],
+            "description": "팀 멤버 목록"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members",
+            "requestBody": {
+                "memberId": "",
+                "role": ""
+            },
+            "responseData": {
+                "teamMember": {}
+            },
+            "description": "팀 멤버 추가"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId",
+            "requestBody": null,
+            "responseData": {
+                "teamMember": {}
+            },
+            "description": "특정 팀 멤버 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId",
+            "requestBody": {
+                "role": ""
+            },
+            "responseData": {
+                "teamMember": {}
+            },
+            "description": "팀 멤버 역할 수정"
+        },
+        {
+            "method": "DELETE",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId",
+            "requestBody": null,
+            "responseData": {
+                "teamMember": {}
+            },
+            "description": "팀 멤버 삭제"
+        }
+    ],
+    "작업(Tasks)": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks",
+            "requestBody": null,
+            "responseData": [],
+            "description": "작업 목록 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks",
+            "requestBody": {
+                "state": "",
+                "priority": "",
+                "task": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "작업 생성"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId",
+            "requestBody": null,
+            "responseData": {
+                "task": {}
+            },
+            "description": "특정 작업 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId",
+            "requestBody": {
+                "state": "",
+                "priority": "",
+                "task": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "작업 수정"
+        }
+    ],
+    "MongoDB 작업": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task",
+            "requestBody": {
+                "id": ""
+            },
+            "responseData": [],
+            "description": "MongoDB 작업 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task",
+            "requestBody": {
+                "title": "",
+                "content": "",
+                "tags": [],
+                "attachments_path": []
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "MongoDB 작업 생성"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId",
+            "requestBody": null,
+            "responseData": {
+                "task": {}
+            },
+            "description": "특정 MongoDB 작업 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId",
+            "requestBody": {
+                "title": "",
+                "content": "",
+                "tags": [],
+                "attachments_path": []
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "MongoDB 작업 수정"
+        }
+    ],
+    "댓글(Comments)": [
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId/comments",
+            "requestBody": null,
+            "responseData": [],
+            "description": "작업 댓글 목록"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId/comments",
+            "requestBody": {
+                "content": "",
+                "parent_id": null
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "댓글 작성"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId/comments/:commentsId",
+            "requestBody": null,
+            "responseData": {
+                "comment": {}
+            },
+            "description": "특정 댓글 조회"
+        },
+        {
+            "method": "PATCH",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId/comments/:commentsId",
+            "requestBody": {
+                "content": ""
+            },
+            "responseData": {
+                "success": true
+            },
+            "description": "댓글 수정"
+        },
+        {
+            "method": "DELETE",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/members/:memberId/tasks/:taskId/task/:taskId/comments/:commentsId",
+            "requestBody": null,
+            "responseData": {
+                "success": true
+            },
+            "description": "댓글 삭제"
+        }
+    ],
+    "DM 메시지": [
+        {
+            "method": "POST",
+            "endpoint": "/v1/user/message/rooms",
+            "requestBody": {
+                "targetUserId": ""
+            },
+            "responseData": {
+                "room": {}
+            },
+            "description": "DM 채팅방 생성/조회"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/user/message/rooms",
+            "requestBody": null,
+            "responseData": {
+                "rooms": [],
+                "total": 0
+            },
+            "description": "DM 채팅방 목록"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/user/message/rooms/:roomId",
+            "requestBody": null,
+            "responseData": {
+                "room": {}
+            },
+            "description": "특정 DM 채팅방 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/user/message/rooms/:roomId/messages",
+            "requestBody": {
+                "content": "",
+                "messageType": "",
+                "replyToId": null,
+                "attachments": []
+            },
+            "responseData": {
+                "message": {}
+            },
+            "description": "DM 메시지 전송"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/user/message/rooms/:roomId/messages",
+            "requestBody": null,
+            "responseData": {
+                "messages": []
+            },
+            "description": "DM 메시지 목록 조회"
+        },
+        {
+            "method": "PUT",
+            "endpoint": "/v1/user/message/messages/:messageId",
+            "requestBody": {
+                "content": ""
+            },
+            "responseData": {
+                "message": {}
+            },
+            "description": "DM 메시지 수정"
+        },
+        {
+            "method": "DELETE",
+            "endpoint": "/v1/user/message/messages/:messageId",
+            "requestBody": null,
+            "responseData": {
+                "success": true
+            },
+            "description": "DM 메시지 삭제"
+        }
+    ],
+    "팀 메시지": [
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/message/rooms",
+            "requestBody": null,
+            "responseData": {
+                "room": {}
+            },
+            "description": "팀 채팅방 생성/조회"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/message/rooms",
+            "requestBody": null,
+            "responseData": {
+                "rooms": []
+            },
+            "description": "팀 채팅방 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/message/rooms/:roomId/messages",
+            "requestBody": {
+                "content": "",
+                "messageType": "",
+                "replyToId": null,
+                "attachments": []
+            },
+            "responseData": {
+                "message": {}
+            },
+            "description": "팀 메시지 전송"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/message/rooms/:roomId/messages",
+            "requestBody": null,
+            "responseData": {
+                "messages": []
+            },
+            "description": "팀 메시지 목록 조회"
+        },
+        {
+            "method": "PUT",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/message/messages/:messageId",
+            "requestBody": {
+                "content": ""
+            },
+            "responseData": {
+                "message": {}
+            },
+            "description": "팀 메시지 수정"
+        },
+        {
+            "method": "DELETE",
+            "endpoint": "/v1/workspace/:workspaceId/teams/:teamId/message/messages/:messageId",
+            "requestBody": null,
+            "responseData": {
+                "success": true
+            },
+            "description": "팀 메시지 삭제"
+        }
+    ],
+    "워크스페이스 메시지": [
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/message/rooms",
+            "requestBody": null,
+            "responseData": {
+                "room": {}
+            },
+            "description": "워크스페이스 채팅방 생성/조회"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/message/rooms",
+            "requestBody": null,
+            "responseData": {
+                "rooms": []
+            },
+            "description": "워크스페이스 채팅방 조회"
+        },
+        {
+            "method": "POST",
+            "endpoint": "/v1/workspace/:workspaceId/message/rooms/:roomId/messages",
+            "requestBody": {
+                "content": "",
+                "messageType": "",
+                "replyToId": null,
+                "attachments": []
+            },
+            "responseData": {
+                "message": {}
+            },
+            "description": "워크스페이스 메시지 전송"
+        },
+        {
+            "method": "GET",
+            "endpoint": "/v1/workspace/:workspaceId/message/rooms/:roomId/messages",
+            "requestBody": null,
+            "responseData": {
+                "messages": []
+            },
+            "description": "워크스페이스 메시지 목록 조회"
+        },
+        {
+            "method": "PUT",
+            "endpoint": "/v1/workspace/:workspaceId/message/messages/:messageId",
+            "requestBody": {
+                "content": ""
+            },
+            "responseData": {
+                "message": {}
+            },
+            "description": "워크스페이스 메시지 수정"
+        },
+        {
+            "method": "DELETE",
+            "endpoint": "/v1/workspace/:workspaceId/message/messages/:messageId",
+            "requestBody": null,
+            "responseData": {
+                "success": true
+            },
+            "description": "워크스페이스 메시지 삭제"
+        }
+    ]
+}
