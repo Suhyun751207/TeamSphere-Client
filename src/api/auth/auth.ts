@@ -18,15 +18,10 @@ async function Logout() {
     return await api.post("/auth/logout");
 }
 
-async function VerifyToken() {
-    return await api.get("/auth/verify");
-}
-
 const AuthServer = {
     Login,
     Signup,
-    Logout,
-    VerifyToken
+    Logout
 }
 
 export default AuthServer;
