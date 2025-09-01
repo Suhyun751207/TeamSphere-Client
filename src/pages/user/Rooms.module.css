@@ -1,0 +1,451 @@
+.container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8fafc;
+}
+
+.content {
+    flex: 1;
+    background-color: white;
+    margin-left: 320px; /* Space for left navbar */
+    margin-right: 0; /* Will be set when right navbar is visible */
+}
+
+.content h1 {
+    color: #1e293b;
+    margin-bottom: 1rem;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.content p {
+    color: #64748b;
+    font-size: 1.1rem;
+}
+
+.leftNavbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 320px;
+    height: 100vh;
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    padding: 1.5rem;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.rightNavbar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background-color: #ffffff;
+    border-left: 1px solid #e2e8f0;
+    padding: 1.5rem;
+    overflow-y: auto;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.addUserButton {
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.4rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.addUserButton:hover:not(:disabled) {
+    background: #059669;
+    transform: scale(1.05);
+}
+
+.addUserButton:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.navbarHeader h3 {
+    color: #1e293b;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.refreshButton {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+.refreshButton:hover:not(:disabled) {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.refreshButton:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.error {
+    background-color: #fef2f2;
+    color: #dc2626;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    border: 1px solid #fecaca;
+    font-size: 0.9rem;
+}
+
+.loading {
+    text-align: center;
+    color: #64748b;
+    padding: 2rem;
+    font-size: 1rem;
+}
+
+.roomsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.emptyState {
+    text-align: center;
+    color: #94a3b8;
+    padding: 2rem;
+    font-style: italic;
+}
+
+.roomItem {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.roomItem:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.roomHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.roomId {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 1rem;
+}
+
+.roomDate {
+    font-size: 0.8rem;
+    color: #64748b;
+    background: #e2e8f0;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+}
+
+.roomDetails {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.userId {
+    color: #475569;
+    font-weight: 500;
+}
+
+.lastMessage {
+    color: #475569;
+    background: #f1f5f9;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+}
+
+.noMessages {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.8rem;
+}
+
+/* Content margin adjustment when right navbar is visible */
+.container:has(.rightNavbar) .content {
+    margin-right: 280px;
+}
+
+/* Members list styles */
+.membersList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.memberItem {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.memberItem:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.memberInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.memberName {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem;
+}
+
+.memberDate {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.roomInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.roomName {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 1rem;
+}
+
+.loadingSpinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e2e8f0;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+    .content {
+        margin-right: 0 !important;
+    }
+    
+    .rightNavbar {
+        display: none;
+    }
+}
+
+/* Modal Styles */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modalHeader h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.inviteForm {
+    padding: 1.5rem;
+}
+
+.inviteInput {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.inviteInput:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modalButtons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.cancelButton {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.inviteSubmitButton {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.inviteSubmitButton:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.inviteSubmitButton:disabled,
+.cancelButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+    
+    .leftNavbar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: none;
+    }
+    
+    .rightNavbar {
+        display: none;
+    }
+    
+    .container {
+        flex-direction: column;
+    }
+    
+    .modal {
+        width: 95%;
+        margin: 1rem;
+    }
+}

@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "../pages/auth/Login";
 import Signup from "../pages/auth/Signup";
 import Dashboard from "../pages/Dashboard";
-import Profile from "../pages/user/Profile";
 import Rooms from "../pages/user/Rooms";
+import RoomDetail from "../pages/user/RoomDetail";
 
 export default function Router() {
     return (
@@ -15,8 +15,9 @@ export default function Router() {
                     <Route path="signup" element={<Signup />} />
                 </Route>
                 <Route path="/user">
-                    <Route path="rooms" element={<Rooms />} />
-                    <Route path="profile" element={<Profile />} />
+                    <Route path="rooms" element={<Rooms />}>
+                        <Route path=":roomId" element={<RoomDetail />} />
+                    </Route>
                 </Route>
             </Routes>
         </BrowserRouter>
