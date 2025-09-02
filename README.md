@@ -1,6 +1,9 @@
-# TeamSphere Client
+# TeamSphere Client 🚀
 
-TeamSphere는 팀 협업을 위한 완전한 워크스페이스 관리 플랫폼입니다. 이 클라이언트 애플리케이션은 React와 TypeScript로 구축되었으며, 팀, 작업, 메시징을 통합 관리할 수 있습니다.
+> **Real-time Team Collaboration & Task Management Frontend**  
+> React 19 + TypeScript + Socket.IO + Zustand
+
+TeamSphere는 팀 협업을 위한 완전한 워크스페이스 관리 플랫폼입니다. 이 클라이언트 애플리케이션은 React와 TypeScript로 구축되었으며, 실시간 메시징과 하이브리드 데이터베이스를 활용한 팀, 작업, 메시징을 통합 관리할 수 있습니다.
 
 ## 주요 기능
 
@@ -25,11 +28,12 @@ TeamSphere는 팀 협업을 위한 완전한 워크스페이스 관리 플랫폼
 - 댓글 시스템
 - 작업 상태 및 우선순위 관리
 
-### 💬 메시징 시스템
-- DM (Direct Message)
-- 팀 채팅
-- 워크스페이스 채팅
-- 실시간 메시지 교환
+### 💬 실시간 메시징 시스템
+- **Socket.IO 기반 실시간 통신**
+- **채팅방 관리**: DM, 팀 채팅, 워크스페이스 채팅
+- **메시지 기능**: 텍스트, 이미지, 파일 메시지 지원
+- **실시간 업데이트**: 방 목록 자동 정렬, 새 메시지 알림
+- **MongoDB 기반**: 확장 가능한 메시지 저장
 
 ## 기술 스택
 
@@ -37,8 +41,10 @@ TeamSphere는 팀 협업을 위한 완전한 워크스페이스 관리 플랫폼
 - **상태 관리**: Zustand
 - **라우팅**: React Router v7
 - **HTTP 클라이언트**: Axios
+- **실시간 통신**: Socket.IO Client
 - **스타일링**: CSS Modules
 - **빌드 도구**: Create React App
+- **인증**: JWT 토큰 (쿠키 기반)
 
 ## 프로젝트 구조
 
@@ -48,42 +54,37 @@ client/
 │   └── index.html
 ├── src/
 │   ├── api/              # API 서비스 레이어
-│   │   ├── authAPI.ts
-│   │   ├── workspaceAPI.ts
-│   │   ├── teamAPI.ts
-│   │   ├── taskAPI.ts
-│   │   ├── messageAPI.ts
-│   │   ├── profileAPI.ts
-│   │   └── activityAPI.ts
+│   │   ├── user/         # 사용자 관련 API
+│   │   │   ├── auth/     # 인증 API
+│   │   │   ├── profile/  # 프로필 API
+│   │   │   └── rooms/    # 채팅방 API
+│   │   └── workspace/    # 워크스페이스 API
 │   ├── components/       # 재사용 가능한 컴포넌트
-│   │   ├── Button.tsx
-│   │   ├── Header.tsx
-│   │   ├── Footer.tsx
-│   │   ├── Login.tsx
-│   │   ├── Register.tsx
-│   │   └── LoadingSpinner.tsx
-│   ├── pages/           # 페이지 컴포넌트
-│   │   ├── Dashboard.tsx
-│   │   ├── WorkspaceList.tsx
-│   │   ├── WorkspaceDetail.tsx
-│   │   ├── TeamDetail.tsx
-│   │   ├── TaskDetail.tsx
-│   │   ├── ProfilePage.tsx
-│   │   ├── MessagesPage.tsx
-│   │   └── NotFound.tsx
-│   ├── routes/          # 라우팅 관련
-│   │   └── ProtectedRoute.tsx
-│   ├── store/           # Zustand 상태 관리
+│   │   ├── common/       # 공통 컴포넌트
+│   │   ├── layout/       # 레이아웃 컴포넌트
+│   │   └── ui/           # UI 컴포넌트
+│   ├── config/           # 설정 파일
+│   │   └── api.ts        # API 기본 설정
+│   ├── hooks/            # 커스텀 훅
+│   │   ├── useSocket.ts  # Socket.IO 훅
+│   │   └── useAuth.ts    # 인증 훅
+│   ├── pages/            # 페이지 컴포넌트
+│   │   ├── auth/         # 인증 페이지
+│   │   ├── user/         # 사용자 페이지
+│   │   │   ├── Rooms.tsx      # 채팅방 목록
+│   │   │   └── RoomDetail.tsx # 채팅방 상세
+│   │   └── workspace/    # 워크스페이스 페이지
+│   ├── store/            # Zustand 상태 관리
 │   │   ├── authStore.ts
-│   │   ├── workspaceStore.ts
-│   │   ├── teamStore.ts
-│   │   ├── taskStore.ts
-│   │   └── messageStore.ts
-│   ├── styles/          # CSS 모듈
+│   │   ├── roomStore.ts  # 채팅방 상태
+│   │   └── socketStore.ts # Socket 상태
+│   ├── styles/           # CSS 모듈
 │   │   ├── global.css
 │   │   └── *.module.css
-│   ├── types/           # TypeScript 타입 정의
-│   │   └── api.ts
+│   ├── types/            # TypeScript 타입 정의
+│   │   ├── api.ts
+│   │   ├── socket.ts     # Socket 이벤트 타입
+│   │   └── room.ts       # 채팅방 타입
 │   └── App.tsx
 ├── package.json
 └── README.md
@@ -100,7 +101,8 @@ npm install
 `.env` 파일을 생성하고 다음 변수를 설정하세요:
 
 ```env
-REACT_APP_API_BASE_URL=http://localhost:3001
+REACT_APP_API_BASE_URL=http://localhost:8080
+REACT_APP_SOCKET_URL=http://localhost:8080
 ```
 
 ### 3. 개발 서버 실행
@@ -109,6 +111,8 @@ npm start
 ```
 
 애플리케이션이 `http://localhost:3000`에서 실행됩니다.
+
+**주의**: 서버가 `http://localhost:8080`에서 실행 중이어야 합니다.
 
 ### 4. 빌드
 ```bash
@@ -120,22 +124,24 @@ npm run build
 이 클라이언트는 TeamSphere 서버 API와 연동됩니다. 서버가 실행 중이어야 모든 기능이 정상 작동합니다.
 
 ### 주요 API 엔드포인트
-- `/v1/auth/*` - 인증 관련
+- `/v1/auth/*` - 인증 관련 (회원가입/로그인/토큰 검증)
 - `/v1/workspace/*` - 워크스페이스 관리
 - `/v1/workspace/:id/teams/*` - 팀 관리
 - `/v1/workspace/:id/members/*` - 멤버 관리
-- `/v1/user/message/*` - DM 메시지
-- `/v1/workspace/:id/Teams/:teamId/message/*` - 팀 메시지
+- `/v1/workspace/:id/message/*` - 실시간 메시징 시스템
+- `/v1/user/profile/*` - 사용자 프로필 관리
+- **Socket.IO**: 실시간 이벤트 (`join_room`, `send_message`, `room_updated`)
 
 ## 상태 관리
 
 Zustand를 사용하여 다음과 같은 전역 상태를 관리합니다:
 
-- **authStore**: 사용자 인증 상태
+- **authStore**: 사용자 인증 상태 (JWT 토큰, 사용자 정보)
+- **roomStore**: 채팅방 목록 및 메시지 상태
+- **socketStore**: Socket.IO 연결 상태 및 실시간 이벤트
 - **workspaceStore**: 워크스페이스 및 멤버 정보
 - **teamStore**: 팀 및 팀 멤버 정보
-- **taskStore**: 작업 및 댓글 정보
-- **messageStore**: 메시지 및 채팅방 정보
+- **taskStore**: 작업 및 댓글 정보 (MySQL + MongoDB 하이브리드)
 
 ## 라우팅
 
@@ -145,12 +151,13 @@ React Router를 사용한 주요 라우트:
 - `/login` - 로그인 페이지
 - `/register` - 회원가입 페이지
 - `/dashboard` - 대시보드
+- `/rooms` - 채팅방 목록 (실시간 메시징)
+- `/rooms/:roomId` - 채팅방 상세 (실시간 채팅)
 - `/workspaces` - 워크스페이스 목록
 - `/workspace/:id` - 워크스페이스 상세
 - `/workspace/:id/team/:teamId` - 팀 상세
 - `/workspace/:id/team/:teamId/task/:taskId` - 작업 상세
 - `/profile` - 프로필 페이지
-- `/messages` - 메시지 페이지
 
 모든 보호된 라우트는 `ProtectedRoute` 컴포넌트로 래핑되어 인증된 사용자만 접근할 수 있습니다.
 
@@ -162,14 +169,17 @@ React Router를 사용한 주요 라우트:
 3. 필요시 `src/components/Header.tsx` 에 네비게이션 링크 추가
 
 ### 새로운 API 추가
-1. `src/types/api.ts` 에 타입 정의 추가
+1. `src/types/` 에 타입 정의 추가
 2. `src/api/` 에 API 서비스 함수 추가
 3. 해당 Zustand 스토어에 액션 추가
+4. Socket.IO 이벤트가 필요한 경우 `useSocket` 훅 확장
 
 ### 스타일링
-- CSS Modules 사용
+- **CSS Modules** 사용
 - 전역 스타일은 `src/styles/global.css`
 - 컴포넌트별 스타일은 `*.module.css`
+- 반응형 디자인 지원
+- 실시간 UI 업데이트 (Socket.IO 연동)
 
 ## 라이센스
 
