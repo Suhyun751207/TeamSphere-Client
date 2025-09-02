@@ -46,35 +46,26 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   // Helper function to get token from cookies
   const getTokenFromCookie = (): string | null => {
     const cookies = document.cookie.split(';');
-    console.log('🍪 All cookies:', document.cookie);
-    console.log('🔍 Parsed cookies:', cookies);
     
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
-      console.log(`🏷️ Cookie: ${name} = ${value ? 'HAS_VALUE' : 'EMPTY'}`);
       
       // Try different possible cookie names
       if (name === 'token' || name === 'authToken' || name === 'accessToken' || name === 'accesstoken' || name === 'jwt') {
-        console.log(`✅ Found auth token in cookie: ${name}`);
         return decodeURIComponent(value);
       }
     }
-    console.log('❌ No auth token found in any cookie');
     return null;
   };
 
   // Initialize socket connection
   const connect = () => {
-    console.log('🔄 Socket.IO connect() called');
     
     if (socketRef.current?.connected) {
-      console.log('⚠️ Socket already connected, skipping');
       return;
     }
 
     const token = getTokenFromCookie();
-    console.log('🍪 Token from cookie:', token ? 'EXISTS' : 'NOT FOUND');
-    console.log('🔗 Attempting to connect to:', serverPath);
     
     if (!token) {
       console.error('❌ No authentication token found in cookies');
@@ -83,29 +74,24 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     }
 
     try {
-      console.log('🚀 Creating Socket.IO instance...');
       socketRef.current = io(serverPath, {
         auth: {
           token: token
         },
         autoConnect: false
       });
-      console.log('✅ Socket.IO instance created');
 
       // Connection event handlers
       socketRef.current.on('connect', () => {
-        console.log('Socket.IO connected');
         setIsConnected(true);
         setConnectionError(null);
       });
 
       socketRef.current.on('disconnect', (reason) => {
-        console.log('Socket.IO disconnected:', reason);
         setIsConnected(false);
       });
 
       socketRef.current.on('connect_error', (error) => {
-        console.error('Socket.IO connection error:', error);
         console.error('Server path:', serverPath);
         console.error('Token exists:', !!token);
         setConnectionError(`Connection failed: ${error.message}`);
@@ -113,9 +99,7 @@ export const useSocket = (options: UseSocketOptions = {}) => {
       });
 
       // Connect to server
-      console.log('🔌 Calling socket.connect()...');
       socketRef.current.connect();
-      console.log('📡 socket.connect() called');
     } catch (error) {
       console.error('Failed to initialize socket:', error);
       setConnectionError('Failed to initialize socket connection');
@@ -135,7 +119,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   const joinRoom = (roomId: number) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('join_room', { roomId });
-      console.log(`Joining room ${roomId}`);
     }
   };
 
@@ -143,7 +126,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   const leaveRoom = (roomId: number) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('leave_room', { roomId });
-      console.log(`Leaving room ${roomId}`);
     }
   };
 
@@ -151,7 +133,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   const sendMessage = (roomId: number, content: string, type: string = 'TEXT') => {
     if (socketRef.current?.connected && content.trim()) {
       socketRef.current.emit('send_message', { roomId, content: content.trim(), type });
-      console.log(`Sending message to room ${roomId}:`, content);
     }
   };
 
@@ -227,17 +208,12 @@ export const useSocket = (options: UseSocketOptions = {}) => {
 
   // Auto-connect on mount if enabled
   useEffect(() => {
-    console.log('🎯 useSocket useEffect triggered, autoConnect:', autoConnect);
     if (autoConnect) {
-      console.log('🔄 Auto-connecting...');
       connect();
-    } else {
-      console.log('⏸️ Auto-connect disabled');
     }
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 useSocket cleanup');
       disconnect();
     };
   }, [autoConnect]);
