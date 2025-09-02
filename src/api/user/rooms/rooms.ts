@@ -36,6 +36,10 @@ async function MessageSelect(roomId: number, messageId: number) {
     return await api.get(`/user/rooms/${roomId}/message/${messageId}`);
 }
 
+async function RoomMembersSelect(roomId: number) {
+    return await api.get(`/user/rooms/${roomId}/members`);
+}
+
 const RoomsService = {
     RoomsSelect,
     RoomsCreate,
@@ -45,6 +49,7 @@ const RoomsService = {
     RoomUserInvite,
     RoomLastMessageUpdate,
     MessageSelect,
+    RoomMembersSelect,
 }
 
 export default RoomsService;

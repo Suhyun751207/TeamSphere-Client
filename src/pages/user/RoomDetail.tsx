@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import RoomsService from "../../api/user/rooms/rooms";
-import ProfileService from "../../api/user/profile/profile";
+import ProfileService from "../../api/user/Profile";
 import useSocket from "../../hooks/useSocket";
 import styles from './RoomDetail.module.css';
 
@@ -28,6 +28,8 @@ interface Member {
     userId: number;
     lastMessageId: number | null;
     createdAt: string;
+    userName?: string;
+    isOnline?: boolean;
 }
 
 
@@ -43,7 +45,10 @@ function RoomDetail() {
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [currentUserName, setCurrentUserName] = useState<string>('');
     const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
+    const [typingUserNames, setTypingUserNames] = useState<Map<number, string>>(new Map());
     const [isTyping, setIsTyping] = useState(false);
+    const [members, setMembers] = useState<Member[]>([]);
+    const [showMembersList, setShowMembersList] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -58,8 +63,41 @@ function RoomDetail() {
         stopTyping,
         onNewMessage,
         onMessageError,
-        onUserTyping
+        onUserTyping,
+        onUserOnline,
+        onUserOffline
     } = useSocket();
+
+    const loadMembers = useCallback(async () => {
+        if (!roomId) return;
+        
+        try {
+            const membersRes = await RoomsService.RoomMembersSelect(parseInt(roomId));
+            const membersArray = Array.isArray(membersRes.data) ? membersRes.data : [];
+            
+            // Fetch user names for members (server already provides isOnline status)
+            const membersWithNames = await Promise.all(
+                membersArray.map(async (member: Member) => {
+                    try {
+                        const profileRes = await ProfileService.ProfileUserGet(member.userId);
+                        return {
+                            ...member,
+                            userName: profileRes.data.profile?.name || `User ${member.userId}`
+                        };
+                    } catch (err) {
+                        return {
+                            ...member,
+                            userName: `User ${member.userId}`
+                        };
+                    }
+                })
+            );
+            
+            setMembers(membersWithNames);
+        } catch (err) {
+            console.error('Failed to load members:', err);
+        }
+    }, [roomId]);
 
     const loadRoomData = useCallback(async () => {
         if (!roomId) return;
@@ -74,7 +112,7 @@ function RoomDetail() {
                 const messagesWithProfiles = await Promise.all(
                     messagesArray.map(async (message: Message) => {
                         try {
-                            const profileRes = await ProfileService.getProfile(message.userId);
+                            const profileRes = await ProfileService.ProfileUserGet(message.userId);
                             const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
                             return { ...message, userName };
                         } catch (err) {
@@ -90,7 +128,7 @@ function RoomDetail() {
                 const messagesWithProfiles = await Promise.all(
                     messagesArray.map(async (message: Message) => {
                         try {
-                            const profileRes = await ProfileService.getProfile(message.userId);
+                            const profileRes = await ProfileService.ProfileUserGet(message.userId);
                             const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
                             return { ...message, userName };
                         } catch (err) {
@@ -201,7 +239,7 @@ function RoomDetail() {
 
     const fetchCurrentUser = async () => {
         try {
-            const profileRes = await ProfileService.getMe();
+            const profileRes = await ProfileService.ProfileAllGet();
             setCurrentUserName(profileRes.data.user?.name || profileRes.data.profile?.name || 'You');
         } catch (err) {
             console.error('Failed to fetch current user:', err);
@@ -253,7 +291,7 @@ function RoomDetail() {
         const unsubscribeNewMessage = onNewMessage(async (message) => {
             try {
                 // Get user profile for the message
-                const profileRes = await ProfileService.getProfile(message.userId);
+                const profileRes = await ProfileService.ProfileUserGet(message.userId);
                 const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
                 
                 const messageWithProfile: MessageWithProfile = {
@@ -309,7 +347,7 @@ function RoomDetail() {
         };
 
         // Listen for typing indicators
-        const unsubscribeUserTyping = onUserTyping((data) => {
+        const unsubscribeUserTyping = onUserTyping(async (data) => {
             const currentUserId = getUserIdFromCookie();
             if (data.userId === currentUserId) return; // Ignore own typing
 
@@ -322,16 +360,63 @@ function RoomDetail() {
                 }
                 return newSet;
             });
+
+            // Fetch user name if not already cached and user is typing
+            if (data.isTyping) {
+                setTypingUserNames(prev => {
+                    if (!prev.has(data.userId)) {
+                        // Fetch user name asynchronously
+                        ProfileService.ProfileUserGet(data.userId)
+                            .then(response => {
+                                setTypingUserNames(prevNames => 
+                                    new Map(prevNames).set(data.userId, response.data.profile.name || `User ${data.userId}`)
+                                );
+                            })
+                            .catch(() => {
+                                setTypingUserNames(prevNames => 
+                                    new Map(prevNames).set(data.userId, `User ${data.userId}`)
+                                );
+                            });
+                        return new Map(prev).set(data.userId, `User ${data.userId}`); // Temporary name
+                    }
+                    return prev;
+                });
+            }
+        });
+
+        // Listen for user join/leave events to refresh member list
+        const unsubscribeUserOnline = onUserOnline((data) => {
+            if (roomId && parseInt(roomId) === data.roomId) {
+                // Refresh member list to get updated online status from server
+                loadMembers();
+            }
+        });
+
+        const unsubscribeUserOffline = onUserOffline((data) => {
+            if (roomId && parseInt(roomId) === data.roomId) {
+                // Refresh member list to get updated online status from server
+                loadMembers();
+            }
         });
 
         // Cleanup function
         return () => {
-            leaveRoom(parseInt(roomId));
+            if (roomId) {
+                leaveRoom(parseInt(roomId));
+            }
             unsubscribeNewMessage();
             unsubscribeMessageError();
             unsubscribeUserTyping();
+            unsubscribeUserOnline();
+            unsubscribeUserOffline();
         };
-    }, [roomId, isConnected, onNewMessage, onMessageError, onUserTyping, joinRoom, leaveRoom]);
+    }, [roomId, isConnected, onNewMessage, onMessageError, onUserTyping, onUserOnline, onUserOffline, joinRoom, leaveRoom, loadMembers]);
+
+    // Load members when room changes or online users change
+    useEffect(() => {
+        loadRoomData();
+        loadMembers();
+    }, [loadRoomData, loadMembers]);
 
     useEffect(() => {
         loadRoomData();
@@ -374,6 +459,13 @@ function RoomDetail() {
                             <span className={styles.disconnected}>🔴 Offline</span>
                         )}
                     </div>
+                    <button 
+                        onClick={() => setShowMembersList(!showMembersList)}
+                        className={styles.membersButton}
+                        title="Show members"
+                    >
+                        👥 ({members.length})
+                    </button>
                     <button 
                         onClick={loadRoomData} 
                         className={styles.refreshButton}
@@ -422,12 +514,44 @@ function RoomDetail() {
                 {typingUsers.size > 0 && (
                     <div className={styles.typingIndicator}>
                         {Array.from(typingUsers).length === 1 
-                            ? `User ${Array.from(typingUsers)[0]} is typing...`
+                            ? `${typingUserNames.get(Array.from(typingUsers)[0]) || `User ${Array.from(typingUsers)[0]}`} is typing...`
                             : `${Array.from(typingUsers).length} users are typing...`
                         }
                     </div>
                 )}
             </div>
+
+            {/* Members sidebar */}
+            {showMembersList && (
+                <div className={styles.membersSidebar}>
+                    <div className={styles.membersHeader}>
+                        <h3>Members ({members.length})</h3>
+                        <button 
+                            onClick={() => setShowMembersList(false)}
+                            className={styles.closeSidebar}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    <div className={styles.membersList}>
+                        {members.map((member) => (
+                            <div key={member.id} className={styles.memberItem}>
+                                <div className={styles.memberInfo}>
+                                    <span className={`${styles.onlineStatus} ${member.isOnline ? styles.online : styles.offline}`}>
+                                        {member.isOnline ? '🟢' : '⚫'}
+                                    </span>
+                                    <span className={styles.memberName}>
+                                        {member.userName || `User ${member.userId}`}
+                                    </span>
+                                </div>
+                                <span className={styles.memberStatus}>
+                                    {member.isOnline ? 'Online' : 'Offline'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={sendMessage} className={styles.messageForm}>
                 <div className={styles.inputContainer}>

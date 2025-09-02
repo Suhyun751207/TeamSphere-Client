@@ -33,6 +33,8 @@ interface SocketEvents {
   user_joined: (callback: (data: { userId: number; roomId: number; timestamp: Date }) => void) => void;
   user_left: (callback: (data: { userId: number; roomId: number; timestamp: Date }) => void) => void;
   user_typing: (callback: (data: { userId: number; roomId: number; isTyping: boolean }) => void) => void;
+  user_online: (callback: (data: { userId: number; roomId: number; timestamp: Date }) => void) => void;
+  user_offline: (callback: (data: { userId: number; roomId: number; timestamp: Date }) => void) => void;
   user_disconnected: (callback: (data: { userId: number; timestamp: Date }) => void) => void;
 }
 
@@ -190,6 +192,22 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     return () => {};
   };
 
+  const onUserOnline = (callback: (data: { userId: number; roomId: number; timestamp: Date }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('user_online', callback);
+      return () => socketRef.current?.off('user_online', callback);
+    }
+    return () => {};
+  };
+
+  const onUserOffline = (callback: (data: { userId: number; roomId: number; timestamp: Date }) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on('user_offline', callback);
+      return () => socketRef.current?.off('user_offline', callback);
+    }
+    return () => {};
+  };
+
   const onUserDisconnected = (callback: (data: { userId: number; timestamp: Date }) => void) => {
     if (socketRef.current) {
       socketRef.current.on('user_disconnected', callback);
@@ -252,6 +270,8 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     onUserJoined,
     onUserLeft,
     onUserTyping,
+    onUserOnline,
+    onUserOffline,
     onUserDisconnected,
     onRoomUpdated,
     
