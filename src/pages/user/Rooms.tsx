@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import RoomsService from "../../api/user/rooms/rooms";
 import ProfileService from "../../api/user/profile/profile";
+import useSocket from "../../hooks/useSocket";
 import styles from './Rooms.module.css';
 
 interface Room {
@@ -10,6 +11,7 @@ interface Room {
     userId: number;
     lastMessageId: number | null;
     createdAt: string;
+    lastMessageTime?: string; // 마지막 메시지 시간 추가
     room?: {
         title?: string;
         lastMessageId?: number | null;
@@ -51,6 +53,12 @@ function Rooms() {
     
     const isRoomDetailPage = location.pathname.includes('/user/rooms/') && location.pathname !== '/user/rooms';
 
+    // Initialize Socket.IO connection for real-time room updates
+    const {
+        isConnected,
+        onRoomUpdated
+    } = useSocket();
+
     const loadRooms = async () => {
         try {
             setLoading(true);
@@ -59,27 +67,40 @@ function Rooms() {
             setError(null);
             
             const messagesMap: {[key: number]: string} = {};
-            const messageTimesMap: {[key: number]: string} = {};
-            await Promise.all(
+            const roomsWithMessageTimes = await Promise.all(
                 res.data.map(async (room: Room) => {
                     const messageId = room.room?.lastMessageId || room.lastMessageId;
                     if (messageId) {
                         try {
                             const messageRes = await RoomsService.MessageSelect(room.roomId, messageId);
                             messagesMap[room.roomId] = messageRes.data.content || 'No content';
-                            messageTimesMap[room.roomId] = messageRes.data.createdAt || new Date(0).toISOString();
+                            return {
+                                ...room,
+                                lastMessageTime: messageRes.data.createdAt
+                            };
                         } catch (err) {
                             console.error(`Failed to load message ${messageId} for room ${room.roomId}:`, err);
                             messagesMap[room.roomId] = 'Failed to load message';
+                            return {
+                                ...room,
+                                lastMessageTime: room.createdAt // fallback to room createdAt
+                            };
                         }
+                    } else {
+                        messagesMap[room.roomId] = 'No messages yet';
+                        return {
+                            ...room,
+                            lastMessageTime: room.createdAt // fallback to room createdAt
+                        };
                     }
                 })
             );
-            // Sort rooms by last message time
-            const sortedRooms = [...res.data].sort((a, b) => {
-                const timeA = messageTimesMap[a.roomId] || new Date(0).toISOString();
-                const timeB = messageTimesMap[b.roomId] || new Date(0).toISOString();
-                return new Date(timeB).getTime() - new Date(timeA).getTime();
+            
+            // Sort rooms by last message time (most recent first)
+            const sortedRooms = roomsWithMessageTimes.sort((a, b) => {
+                const timeA = new Date(a.lastMessageTime || a.createdAt).getTime();
+                const timeB = new Date(b.lastMessageTime || b.createdAt).getTime();
+                return timeB - timeA;
             });
             
             setRooms(sortedRooms);
@@ -168,17 +189,68 @@ function Rooms() {
         }
     }, [isRoomDetailPage]);
 
-    // Add event listener for custom room update events
+    // Real-time room updates via Socket.IO
+    useEffect(() => {
+        if (!isConnected) return;
+
+        const unsubscribeRoomUpdated = onRoomUpdated(async (data) => {
+            const { roomId: updatedRoomId, lastMessageId, lastMessage } = data;
+            
+            // Update rooms state with new lastMessageId
+            setRooms(prevRooms => {
+                // Update the room with new lastMessageId and lastMessageTime
+                const updatedRooms = prevRooms.map(room => {
+                    if (room.roomId === updatedRoomId) {
+                        return {
+                            ...room,
+                            lastMessageId: lastMessageId,
+                            lastMessageTime: lastMessage.createdAt, // 새 메시지 시간으로 업데이트
+                            room: {
+                                ...room.room,
+                                lastMessageId: lastMessageId
+                            }
+                        };
+                    }
+                    return room;
+                });
+
+                // Sort rooms by last message time (most recent first)
+                return updatedRooms.sort((a, b) => {
+                    const timeA = a.roomId === updatedRoomId ? 
+                        new Date(lastMessage.createdAt).getTime() : 
+                        new Date(a.lastMessageTime || a.createdAt).getTime();
+                    const timeB = b.roomId === updatedRoomId ? 
+                        new Date(lastMessage.createdAt).getTime() : 
+                        new Date(b.lastMessageTime || b.createdAt).getTime();
+                    return timeB - timeA;
+                });
+            });
+
+            // Update last messages display
+            setLastMessages(prevMessages => ({
+                ...prevMessages,
+                [updatedRoomId]: lastMessage.content
+            }));
+
+            console.log(`Room ${updatedRoomId} updated with new message: ${lastMessage.content}`);
+        });
+
+        return unsubscribeRoomUpdated;
+    }, [isConnected, onRoomUpdated]);
+
+    // Add event listener for custom room update events (fallback)
     useEffect(() => {
         const handleRoomUpdate = () => {
-            loadRooms();
+            if (!isConnected) {
+                loadRooms();
+            }
         };
 
         window.addEventListener('roomUpdated', handleRoomUpdate);
         return () => {
             window.removeEventListener('roomUpdated', handleRoomUpdate);
         };
-    }, []);
+    }, [isConnected]);
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('ko-KR', {
@@ -193,14 +265,23 @@ function Rooms() {
             <div className={styles.leftNavbar}>
                 <div className={styles.navbarHeader}>
                     <h3>My Rooms</h3>
-                    <button 
-                        onClick={createRoom} 
-                        className={styles.refreshButton}
-                        disabled={loading}
-                        title="Create new room"
-                    >
-                        {loading ? '⟳' : '+'}
-                    </button>
+                    <div className={styles.headerActions}>
+                        <div className={styles.connectionStatus}>
+                            {isConnected ? (
+                                <span className={styles.connected}>🟢 실시간</span>
+                            ) : (
+                                <span className={styles.disconnected}>🔴 오프라인</span>
+                            )}
+                        </div>
+                        <button 
+                            onClick={createRoom} 
+                            className={styles.refreshButton}
+                            disabled={loading}
+                            title="Create new room"
+                        >
+                            {loading ? '⟳' : '+'}
+                        </button>
+                    </div>
                 </div>
                 
                 {error && (

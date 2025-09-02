@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import RoomsService from "../../api/user/rooms/rooms";
 import ProfileService from "../../api/user/profile/profile";
+import useSocket from "../../hooks/useSocket";
 import styles from './RoomDetail.module.css';
 
 interface Message {
@@ -41,7 +42,24 @@ function RoomDetail() {
     const [inviting, setInviting] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [currentUserName, setCurrentUserName] = useState<string>('');
+    const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
+    const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Initialize Socket.IO connection
+    const {
+        isConnected,
+        connectionError,
+        joinRoom,
+        leaveRoom,
+        sendMessage: sendSocketMessage,
+        startTyping,
+        stopTyping,
+        onNewMessage,
+        onMessageError,
+        onUserTyping
+    } = useSocket();
 
     const loadRoomData = useCallback(async () => {
         if (!roomId) return;
@@ -102,45 +120,64 @@ function RoomDetail() {
 
         const messageContent = newMessage.trim();
         setNewMessage(''); 
-        setSending(false); 
+        setSending(true);
         
-        const newMessageObj: MessageWithProfile = {
-            id: Date.now(), 
-            roomId: parseInt(roomId),
-            userId: parseInt(localStorage.getItem('userId') || '0'),
-            type: 'text',
-            content: messageContent,
-            imagePath: null,
-            isEdited: false,
-            isValid: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            userName: currentUserName
-        };
-        setMessages(prev => [...prev, newMessageObj]);
-        setTimeout(scrollToBottom, 100);
+        // Stop typing indicator
+        if (isTyping) {
+            stopTyping(parseInt(roomId));
+            setIsTyping(false);
+        }
 
         try {
-            const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
-            
-            if (messageRes.data && messageRes.data.insertId) {
-                setMessages(prev => prev.map(msg => 
-                    msg.id === newMessageObj.id 
-                        ? { ...msg, id: messageRes.data.insertId }
-                        : msg
-                ));
+            // Send via Socket.IO for real-time delivery
+            if (isConnected) {
+                sendSocketMessage(parseInt(roomId), messageContent);
+            } else {
+                // Fallback to REST API if Socket.IO is not connected
+                const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
                 
-                try {
-                    await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
-                    window.dispatchEvent(new CustomEvent('roomUpdated'));
-                } catch (updateErr) {
-                    console.error('Failed to update room lastMessageId:', updateErr);
+                if (messageRes.data && messageRes.data.insertId) {
+                    // Add message to local state for immediate feedback
+                    // Helper function to get userId from cookies
+                    const getUserIdFromCookie = (): number => {
+                        const cookies = document.cookie.split(';');
+                        for (let cookie of cookies) {
+                            const [name, value] = cookie.trim().split('=');
+                            if (name === 'userId') {
+                                return parseInt(decodeURIComponent(value)) || 0;
+                            }
+                        }
+                        return 0;
+                    };
+
+                    const newMessageObj: MessageWithProfile = {
+                        id: messageRes.data.insertId,
+                        roomId: parseInt(roomId),
+                        userId: getUserIdFromCookie(),
+                        type: 'TEXT',
+                        content: messageContent,
+                        imagePath: null,
+                        isEdited: false,
+                        isValid: true,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        userName: currentUserName
+                    };
+                    setMessages(prev => [...prev, newMessageObj]);
+                    
+                    try {
+                        await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
+                        window.dispatchEvent(new CustomEvent('roomUpdated'));
+                    } catch (updateErr) {
+                        console.error('Failed to update room lastMessageId:', updateErr);
+                    }
                 }
             }
         } catch (err) {
             console.error('Failed to send message:', err);
             setError('Failed to send message');
-            setMessages(prev => prev.filter(msg => msg.id !== newMessageObj.id));
+        } finally {
+            setSending(false);
         }
     };
 
@@ -171,6 +208,130 @@ function RoomDetail() {
             setCurrentUserName('You');
         }
     };
+
+    // Handle typing indicators
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setNewMessage(value);
+
+        if (!roomId || !isConnected) return;
+
+        // Start typing indicator if not already typing
+        if (value.trim() && !isTyping) {
+            startTyping(parseInt(roomId));
+            setIsTyping(true);
+        }
+
+        // Reset typing timeout
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Stop typing after 2 seconds of inactivity
+        typingTimeoutRef.current = setTimeout(() => {
+            if (isTyping) {
+                stopTyping(parseInt(roomId));
+                setIsTyping(false);
+            }
+        }, 2000);
+
+        // Stop typing if input is empty
+        if (!value.trim() && isTyping) {
+            stopTyping(parseInt(roomId));
+            setIsTyping(false);
+        }
+    };
+
+    // Socket.IO event listeners
+    useEffect(() => {
+        if (!roomId || !isConnected) return;
+
+        // Join the room when component mounts or roomId changes
+        joinRoom(parseInt(roomId));
+
+        // Listen for new messages
+        const unsubscribeNewMessage = onNewMessage(async (message) => {
+            try {
+                // Get user profile for the message
+                const profileRes = await ProfileService.getProfile(message.userId);
+                const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
+                
+                const messageWithProfile: MessageWithProfile = {
+                    ...message,
+                    createdAt: new Date(message.createdAt).toISOString(),
+                    updatedAt: new Date(message.updatedAt).toISOString(),
+                    userName
+                };
+
+                setMessages(prev => {
+                    // Check if message already exists to avoid duplicates
+                    const exists = prev.some(msg => msg.id === message.id);
+                    if (exists) return prev;
+                    return [...prev, messageWithProfile];
+                });
+
+                setTimeout(scrollToBottom, 100);
+                window.dispatchEvent(new CustomEvent('roomUpdated'));
+            } catch (err) {
+                console.error('Failed to load profile for new message:', err);
+                const messageWithProfile: MessageWithProfile = {
+                    ...message,
+                    createdAt: new Date(message.createdAt).toISOString(),
+                    updatedAt: new Date(message.updatedAt).toISOString(),
+                    userName: `User ${message.userId}`
+                };
+                
+                setMessages(prev => {
+                    const exists = prev.some(msg => msg.id === message.id);
+                    if (exists) return prev;
+                    return [...prev, messageWithProfile];
+                });
+                setTimeout(scrollToBottom, 100);
+            }
+        });
+
+        // Listen for message errors
+        const unsubscribeMessageError = onMessageError((error) => {
+            console.error('Socket message error:', error);
+            setError(`Message error: ${error.error}`);
+        });
+
+        // Helper function to get userId from cookies
+        const getUserIdFromCookie = (): number => {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'userId') {
+                    return parseInt(decodeURIComponent(value)) || 0;
+                }
+            }
+            return 0;
+        };
+
+        // Listen for typing indicators
+        const unsubscribeUserTyping = onUserTyping((data) => {
+            const currentUserId = getUserIdFromCookie();
+            if (data.userId === currentUserId) return; // Ignore own typing
+
+            setTypingUsers(prev => {
+                const newSet = new Set(prev);
+                if (data.isTyping) {
+                    newSet.add(data.userId);
+                } else {
+                    newSet.delete(data.userId);
+                }
+                return newSet;
+            });
+        });
+
+        // Cleanup function
+        return () => {
+            leaveRoom(parseInt(roomId));
+            unsubscribeNewMessage();
+            unsubscribeMessageError();
+            unsubscribeUserTyping();
+        };
+    }, [roomId, isConnected, onNewMessage, onMessageError, onUserTyping, joinRoom, leaveRoom]);
 
     useEffect(() => {
         loadRoomData();
@@ -206,6 +367,13 @@ function RoomDetail() {
             <div className={styles.header}>
                 <h2>Room #{roomId}</h2>
                 <div className={styles.headerButtons}>
+                    <div className={styles.connectionStatus}>
+                        {isConnected ? (
+                            <span className={styles.connected}>🟢 Real-time</span>
+                        ) : (
+                            <span className={styles.disconnected}>🔴 Offline</span>
+                        )}
+                    </div>
                     <button 
                         onClick={loadRoomData} 
                         className={styles.refreshButton}
@@ -249,6 +417,16 @@ function RoomDetail() {
                         <div ref={messagesEndRef} />
                     </div>
                 )}
+                
+                {/* Typing indicators */}
+                {typingUsers.size > 0 && (
+                    <div className={styles.typingIndicator}>
+                        {Array.from(typingUsers).length === 1 
+                            ? `User ${Array.from(typingUsers)[0]} is typing...`
+                            : `${Array.from(typingUsers).length} users are typing...`
+                        }
+                    </div>
+                )}
             </div>
 
             <form onSubmit={sendMessage} className={styles.messageForm}>
@@ -256,7 +434,7 @@ function RoomDetail() {
                     <input
                         type="text"
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={handleInputChange}
                         placeholder="Type your message..."
                         className={styles.messageInput}
                         disabled={sending}

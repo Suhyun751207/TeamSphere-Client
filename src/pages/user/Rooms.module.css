@@ -116,8 +116,8 @@
 }
 
 .refreshButton:hover:not(:disabled) {
-    background: #2563eb;
-    transform: scale(1.05);
+    background: #059669;
+    transform: translateY(-1px);
 }
 
 .refreshButton:disabled {
