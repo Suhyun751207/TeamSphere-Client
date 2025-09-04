@@ -415,65 +415,33 @@ function Dashboard() {
                                             <span>많음</span>
                                         </div>
                                     </div>
-                                    <div className="contribution-grid">
-                                        <div className="month-labels">
-                                            {(() => {
-                                                const monthsData = generateMonthlyCalendarData();
-                                                let dayIndex = 0;
-                                                const monthLabels = [];
-                                                
-                                                for (let monthIndex = 0; monthIndex < monthsData.length; monthIndex++) {
-                                                    const monthData = monthsData[monthIndex];
-                                                    
-                                                    // Find the first non-empty day of the month
-                                                    let firstDayIndex = -1;
-                                                    for (let i = 0; i < monthData.days.length; i++) {
-                                                        if (!monthData.days[i].isEmpty) {
-                                                            firstDayIndex = dayIndex + i;
-                                                            break;
-                                                        }
-                                                    }
-                                                    
-                                                    if (firstDayIndex !== -1) {
-                                                        const columnIndex = Math.floor(firstDayIndex / 7);
-                                                        monthLabels.push(
+                                    <div className="monthly-sections">
+                                        {generateMonthlyCalendarData().map((monthData, monthIndex) => (
+                                            <div key={monthIndex} className="month-section-container">
+                                                <div className="month-section-header">
+                                                    <h4>{monthData.monthName} {monthData.year}</h4>
+                                                </div>
+                                                <div className="month-contribution-grid">
+                                                    <div className="month-weekday-labels">
+                                                        {['일', '월', '화', '수', '목', '금', '토'].map((day, index) => (
+                                                            <div key={index} className="weekday-label">{day}</div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="month-contribution-days">
+                                                        {monthData.days.map((day, dayIndex) => (
                                                             <div 
-                                                                key={monthIndex} 
-                                                                className="month-label"
-                                                                style={{ 
-                                                                    left: `${columnIndex * (15 + 3)}px`,
-                                                                }}
-                                                            >
-                                                                {monthData.monthName}
-                                                            </div>
-                                                        );
-                                                    }
-                                                    
-                                                    dayIndex += monthData.days.length;
-                                                }
-                                                
-                                                return monthLabels;
-                                            })()}
-                                        </div>
-                                        <div className="weekday-labels">
-                                            {['일', '월', '화', '수', '목', '금', '토'].map((day, index) => (
-                                                <div key={index} className="weekday-label">{day}</div>
-                                            ))}
-                                        </div>
-                                        <div className="contribution-days">
-                                            {generateMonthlyCalendarData().map((monthData) => 
-                                                monthData.days.map((day, dayIndex) => (
-                                                    <div 
-                                                        key={`${monthData.year}-${monthData.month}-${dayIndex}`}
-                                                        className={`contribution-square ${
-                                                            day.isEmpty ? 'empty' : 
-                                                            day.attended ? 'level-4' : 'level-0'
-                                                        } ${day.isToday ? 'today' : ''}`}
-                                                        title={day.isEmpty ? '' : `${monthData.year}-${(monthData.month + 1).toString().padStart(2, '0')}-${day.date.padStart(2, '0')}: ${day.attended ? '출석함' : '출석안함'}`}
-                                                    ></div>
-                                                ))
-                                            )}
-                                        </div>
+                                                                key={dayIndex}
+                                                                className={`contribution-square ${
+                                                                    day.isEmpty ? 'empty' : 
+                                                                    day.attended ? 'level-4' : 'level-0'
+                                                                } ${day.isToday ? 'today' : ''}`}
+                                                                title={day.isEmpty ? '' : `${monthData.year}-${(monthData.month + 1).toString().padStart(2, '0')}-${day.date.padStart(2, '0')}: ${day.attended ? '출석함' : '출석안함'}`}
+                                                            ></div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </div>

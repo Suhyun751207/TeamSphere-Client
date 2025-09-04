@@ -498,67 +498,75 @@
     color: #24292f;
 }
 
-.contribution-grid {
+.monthly-sections {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    padding: 8px 0;
+    justify-content: space-evenly;
+}
+
+.month-section-container {
+    flex-shrink: 0;
+    border-radius: 8px;
+    padding: 16px;
+    min-width: 30%;
+}
+
+.month-section-header {
+    margin-bottom: 12px;
+    text-align: center;
+    border-bottom: 1px solid #e1e4e8;
+    padding-bottom: 8px;
+}
+
+.month-section-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #24292f;
+}
+
+.month-contribution-grid {
     display: grid;
     grid-template-areas: 
-        "months months"
         "weekdays days";
     grid-template-columns: auto 1fr;
-    gap: 8px;
+    gap: 12px;
 }
 
-.month-labels {
-    grid-area: months;
-    display: grid;
-    grid-template-rows: 1fr;
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    padding-left: 24px;
-    margin-bottom: 4px;
-    position: relative;
-}
-
-.month-label {
-    font-size: 11px;
-    color: #656d76;
-    font-weight: 400;
-    text-align: left;
-    position: absolute;
-    white-space: nowrap;
-}
-
-.weekday-labels {
+.month-weekday-labels {
     grid-area: weekdays;
     display: grid;
     grid-template-rows: repeat(7, 1fr);
     gap: 2px;
     text-align: right;
-    padding-right: 8px;
+    padding-right: 12px;
 }
 
 .weekday-label {
-    font-size: 9px;
+    font-size: 12px;
     color: #656d76;
     font-weight: 400;
     line-height: 11px;
-    height: 11px;
+    height: 15px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
 }
 
-.contribution-days {
+.month-contribution-days {
     grid-area: days;
     display: grid;
     grid-template-rows: repeat(7, 1fr);
     grid-auto-flow: column;
-    gap: 3px;
+    gap: 7px;
     width: 100%;
 }
 
 .contribution-square {
-    width: 15px;
-    height: 15px;
+    width: 20px;
+    height: 20px;
     border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s ease;
