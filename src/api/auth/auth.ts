@@ -15,7 +15,7 @@ async function Signup(email: string, password: string) {
 }
 
 async function Logout() {
-    return await api.post("/auth/logout");
+    return await api.get("/auth/logout");
 }
 
 const AuthServer = {
