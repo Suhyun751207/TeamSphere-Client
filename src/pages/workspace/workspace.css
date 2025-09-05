@@ -1,0 +1,591 @@
+/* Workspace Dashboard Styles - Based on Dashboard.css */
+:root {
+    --bg: #f6f8fb;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --success: #16a34a;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --ring: #e2e8f0;
+    --chip: #eef2ff;
+    --shadow: 0 10px 20px rgba(2, 6, 23, .05), 0 2px 6px rgba(2, 6, 23, .04);
+    --radius: 16px;
+}
+
+.workspace-dashboard {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+    min-height: 100vh;
+    padding: 22px;
+}
+
+.loading, .error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 50vh;
+    font-size: 18px;
+    color: var(--muted);
+}
+
+/* Top bar */
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.spacer {
+    flex: 1;
+}
+
+.back-button {
+    background: var(--text);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.back-button:hover {
+    background: #636363;
+    color: #fff;
+}
+
+/* Grid layout */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid #eef2f7;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.card.pad {
+    padding: 16px;
+}
+
+/* Workspace header section */
+.workspace-header {
+    grid-column: span 12;
+    padding: 0;
+    overflow: hidden;
+}
+
+.workspace-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+    background: linear-gradient(135deg, #000000 0%, #4b5fa2 100%);
+    color: white;
+}
+
+.workspace-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.workspace-details h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+}
+
+.workspace-details p {
+    font-size: 16px;
+    opacity: 0.9;
+    margin: 0 0 12px 0;
+}
+
+.workspace-meta {
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Stats section */
+.stats-section {
+    grid-column: span 12;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-number {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+/* Attendance chart section */
+.attendance-chart {
+    grid-column: span 6;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.chart-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.attendance-summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.pie-chart-container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+}
+
+.pie-chart {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: conic-gradient(
+        var(--success) 0deg,
+        var(--success) var(--attended-angle, 0deg),
+        var(--ring) var(--attended-angle, 0deg),
+        var(--ring) 360deg
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.pie-chart::before {
+    content: '';
+    width: 100px;
+    height: 100px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+}
+
+.pie-chart-text {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.pie-chart-percentage {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.pie-chart-label {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.attendance-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.legend-color.attended {
+    background: var(--success);
+}
+
+.legend-color.not-attended {
+    background: var(--ring);
+}
+
+/* Members section */
+.members-section {
+    grid-column: span 6;
+}
+
+.members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.member-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #fbfdff;
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.member-item:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.member-info {
+    flex: 1;
+}
+
+.member-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.member-role {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.attendance-status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.attendance-status.attended {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.attendance-status.not-attended {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+/* Teams section */
+.teams-section {
+    grid-column: span 6;
+}
+
+.teams-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.team-card {
+    padding: 16px;
+    background: var(--card);
+    border: 1px solid var(--ring);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.team-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.team-card.selected {
+    border-color: var(--primary);
+    background: var(--chip);
+    box-shadow: var(--shadow);
+}
+
+.team-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.team-manager {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.team-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* Team Members Section */
+.team-members-section {
+    grid-column: span 6;
+}
+
+.team-members-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.team-member-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--card);
+    border: 1px solid var(--ring);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.team-member-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.team-member-item.selected {
+    border-color: var(--primary);
+    background: var(--chip);
+    box-shadow: var(--shadow);
+}
+
+.member-task-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--ring);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+/* Member Tasks Section */
+.member-tasks-section {
+    grid-column: span 12;
+    width: 100%;
+}
+
+/* Workspace Table styles */
+.workspace-table-card {
+    background: white;
+    border-radius: 14px;
+    border: 1px solid #eef2f7;
+    overflow: hidden;
+}
+
+.workspace-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.workspace-tabs a {
+    font-weight: 700;
+    color: #475569;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 10px;
+}
+
+.workspace-tabs a.active {
+    background: #eef2ff;
+    color: #1e293b;
+}
+
+.workspace-toolbar .workspace-sp {
+    flex: 1;
+}
+
+.workspace-toolbar .workspace-l {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.workspace-table-wrap {
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.workspace-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.workspace-table thead th {
+    font-size: 12px;
+    color: #64748b;
+    position: sticky;
+    top: 0;
+    background: #fafcff;
+    z-index: 10;
+    font-weight: 700;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.workspace-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+    color: #1e293b;
+}
+
+.workspace-priority-badge,
+.workspace-state-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+    font-size: 11px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.workspace-no-tasks {
+    padding: 40px;
+    text-align: center;
+    color: #64748b;
+    background: var(--bg);
+    border-radius: 8px;
+    margin: 16px 0;
+}
+
+
+.no-tasks,
+.no-teams,
+.no-members,
+.no-selection {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 8px;
+    margin: 16px 0;
+}
+
+.no-teams p,
+.no-members p,
+.no-selection p,
+.no-tasks p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .workspace-dashboard {
+        padding: 16px;
+    }
+    
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .workspace-header,
+    .stats-section,
+    .attendance-chart,
+    .members-section,
+    .teams-section {
+        grid-column: span 1;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .workspace-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .attendance-summary {
+        flex-direction: column;
+    }
+}

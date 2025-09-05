@@ -167,6 +167,7 @@ function Rooms() {
             setLoading(true);
             await RoomsService.RoomsCreate();
             await loadRooms();
+            alert("방 생성 완료")
         } catch (err) {
             console.error('Failed to create room:', err);
             setError('Failed to create room');
@@ -231,8 +232,6 @@ function Rooms() {
                 ...prevMessages,
                 [updatedRoomId]: lastMessage.content
             }));
-
-            console.log(`Room ${updatedRoomId} updated with new message: ${lastMessage.content}`);
         });
 
         return unsubscribeRoomUpdated;
@@ -264,7 +263,16 @@ function Rooms() {
         <div className={styles.container}>
             <div className={styles.leftNavbar}>
                 <div className={styles.navbarHeader}>
-                    <h3>My Rooms</h3>
+                    <div className={styles.headerLeft}>
+                        <button 
+                            onClick={() => navigate(-1)} 
+                            className={styles.backButton}
+                            title="뒤로 가기"
+                        >
+                            ←
+                        </button>
+                        <h3>My Rooms</h3>
+                    </div>
                     <div className={styles.headerActions}>
                         <div className={styles.connectionStatus}>
                             {isConnected ? (

@@ -2,8 +2,8 @@ import api from "../Api";
 import { WorkspaceCreateRequest, RoomCreateRequest } from "../../interface/Workspace";
 
 // 워크스페이스 목록 조회
-async function WorkspaceList() {
-    return await api.get("/workspace");
+async function WorkspaceList(workspaceId: number) {
+    return await api.get(`/workspace/${workspaceId}/dashboard`);
 }
 
 // 워크스페이스 생성

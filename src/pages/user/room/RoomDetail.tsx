@@ -155,7 +155,6 @@ function RoomDetail() {
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!roomId || !newMessage.trim() || sending) return;
-
         const messageContent = newMessage.trim();
         setNewMessage(''); 
         setSending(true);
@@ -167,13 +166,24 @@ function RoomDetail() {
         }
 
         try {
-            // Send via Socket.IO for real-time delivery
             if (isConnected) {
+                // Send via Socket.IO for real-time delivery
                 sendSocketMessage(parseInt(roomId), messageContent);
-            } else {
-                // Fallback to REST API if Socket.IO is not connected
-                const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
                 
+                // For socket messages, we need to create the message in DB to get the ID
+                // and then update the room's last message
+                try {
+                    const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
+                    if (messageRes.data && messageRes.data.insertId) {
+                        // Update room's last message ID
+                        await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
+                        window.dispatchEvent(new CustomEvent('roomUpdated'));
+                    }
+                } catch (updateErr) {
+                    console.error('Failed to update room lastMessageId after socket message:', updateErr);
+                }
+            } else {
+                const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
                 if (messageRes.data && messageRes.data.insertId) {
                     // Add message to local state for immediate feedback
                     // Helper function to get userId from cookies
@@ -202,7 +212,6 @@ function RoomDetail() {
                         userName: currentUserName
                     };
                     setMessages(prev => [...prev, newMessageObj]);
-                    
                     try {
                         await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
                         window.dispatchEvent(new CustomEvent('roomUpdated'));
