@@ -559,6 +559,94 @@
     font-size: 14px;
 }
 
+/* Workspace Rooms Section */
+.workspace-rooms-section {
+    grid-column: span 12;
+}
+
+.rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.room-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: var(--card);
+    border: 1px solid var(--ring);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.room-item:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.room-info {
+    flex: 1;
+}
+
+.room-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.room-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.room-date {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.last-message {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--chip);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: fit-content;
+}
+
+.room-arrow {
+    font-size: 18px;
+    color: var(--muted);
+    transition: transform 0.2s ease;
+}
+
+.room-item:hover .room-arrow {
+    transform: translateX(4px);
+    color: var(--primary);
+}
+
+.no-rooms {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 8px;
+    margin: 16px 0;
+}
+
+.no-rooms p {
+    margin: 0;
+    font-size: 14px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .workspace-dashboard {

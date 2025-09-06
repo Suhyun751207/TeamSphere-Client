@@ -20,6 +20,27 @@ export interface WorkspaceCreateRequest {
 }
 
 export interface RoomCreateRequest {
-    name: string;
+    title: string;
     description?: string;
+}
+
+export interface Message {
+    id: number;
+    roomId: number;
+    userId: number;
+    content: string;
+    messageType: "TEXT" | "IMAGE" | "FILE";
+    isEdited: boolean;
+    isDeleted: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface MessageCreateRequest {
+    content: string;
+    messageType?: "TEXT" | "IMAGE" | "FILE";
+}
+
+export interface MessageUpdateRequest {
+    content: string;
 }

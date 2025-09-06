@@ -7,6 +7,8 @@ import Rooms from "../pages/user/room/Rooms";
 import RoomDetail from "../pages/user/room/RoomDetail";
 import Profile from "../pages/user/profile/Profile";
 import Workspace from "../pages/workspace/workspace";
+import WorkspaceRooms from "../pages/workspace/room/WorkspaceRooms";
+import WorkspaceRoomDetail from "../pages/workspace/room/WorkspaceRoomDetail";
 
 export default function Router() {
     return (
@@ -24,6 +26,9 @@ export default function Router() {
                 {/* Workspace Routes */}
                 <Route path="/workspace">
                     <Route path=":workspaceId" element={<Workspace />} />
+                    <Route path=":workspaceId/room" element={<WorkspaceRooms />}>
+                        <Route path=":roomId" element={<WorkspaceRoomDetail />} />
+                    </Route>
                 </Route>
 
                 {/* User Routes */}

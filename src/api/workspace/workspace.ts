@@ -1,5 +1,5 @@
 import api from "../Api";
-import { WorkspaceCreateRequest, RoomCreateRequest } from "../../interface/Workspace";
+import { WorkspaceCreateRequest, RoomCreateRequest, MessageCreateRequest, MessageUpdateRequest } from "../../interface/Workspace";
 
 // 워크스페이스 목록 조회
 async function WorkspaceList(workspaceId: number) {
@@ -31,13 +31,31 @@ async function WorkspaceRoomCreate(workspaceId: number, data: RoomCreateRequest)
     return await api.post(`/workspace/${workspaceId}/message`, data);
 }
 
+// 워크스페이스 룸 메시지 목록 조회
+async function WorkspaceMessageList(workspaceId: number, roomId: number) {
+    return await api.get(`/workspace/${workspaceId}/message/${roomId}/message`);
+}
+
+// 워크스페이스 룸에 메시지 전송
+async function WorkspaceMessageCreate(workspaceId: number, roomId: number, data: MessageCreateRequest) {
+    return await api.post(`/workspace/${workspaceId}/message/${roomId}/message`, data);
+}
+
+// 워크스페이스 룸 마지막 메시지 업데이트
+async function WorkspaceRoomLastMessageUpdate(workspaceId: number, roomId: number, messageId: number) {
+    return await api.patch(`/workspace/${workspaceId}/message/${roomId}/${messageId}`);
+}
+
 const WorkspaceServer = {
     WorkspaceList,
     WorkspaceCreate,
     WorkspaceDetail,
     WorkspaceUpdate,
     WorkspaceRoomList,
-    WorkspaceRoomCreate
+    WorkspaceRoomCreate,
+    WorkspaceMessageList,
+    WorkspaceMessageCreate,
+    WorkspaceRoomLastMessageUpdate
 };
 
 export default WorkspaceServer;

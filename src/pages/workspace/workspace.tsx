@@ -12,6 +12,8 @@ function Workspace() {
     const [error, setError] = useState<string | null>(null);
     const [selectedTeam, setSelectedTeam] = useState<any>(null);
     const [selectedMember, setSelectedMember] = useState<any>(null);
+    const [workspaceRooms, setWorkspaceRooms] = useState<any[]>([]);
+    const [roomsLoading, setRoomsLoading] = useState(false);
 
     useEffect(() => {
         if (workspaceId) {
@@ -24,8 +26,25 @@ function Workspace() {
                 setError("워크스페이스 데이터를 불러오는데 실패했습니다.");
                 setLoading(false);
             });
+
+            // Load workspace rooms
+            loadWorkspaceRooms();
         }
     }, [workspaceId]);
+
+    const loadWorkspaceRooms = async () => {
+        if (!workspaceId) return;
+        
+        try {
+            setRoomsLoading(true);
+            const roomsRes = await WorkspaceServer.WorkspaceRoomList(Number(workspaceId));
+            setWorkspaceRooms(roomsRes.data || []);
+        } catch (error) {
+            console.error("Workspace rooms fetch error:", error);
+        } finally {
+            setRoomsLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -319,6 +338,42 @@ function Workspace() {
                     ) : (
                         <div className="no-selection">
                             <p>팀을 먼저 선택해주세요.</p>
+                        </div>
+                    )}
+                </section>
+
+                {/* Workspace Rooms Section */}
+                <section className="workspace-rooms-section card pad">
+                    <div className="chart-header">
+                        <h3>워크스페이스 채팅방</h3>
+                        <span>총 {workspaceRooms.length}개</span>
+                    </div>
+                    {roomsLoading ? (
+                        <div className="loading">채팅방 목록을 불러오는 중...</div>
+                    ) : workspaceRooms.length > 0 ? (
+                        <div className="rooms-list">
+                            {workspaceRooms.map((room) => (
+                                <div 
+                                    key={room.id} 
+                                    className="room-item"
+                                    onClick={() => navigate(`/workspace/${workspaceId}/room/${room.roomId}`)}
+                                >
+                                    <div className="room-info">
+                                        <div className="room-name">{room.title || `Room ${room.roomId}`}</div>
+                                        <div className="room-meta">
+                                            <span className="room-date">생성일: {formatDate(room.createdAt)}</span>
+                                            {room.lastMessageId && (
+                                                <span className="last-message">마지막 메시지 ID: {room.lastMessageId}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="room-arrow">→</div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="no-rooms">
+                            <p>생성된 채팅방이 없습니다.</p>
                         </div>
                     )}
                 </section>
