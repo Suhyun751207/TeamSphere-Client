@@ -1,93 +1,128 @@
 # TeamSphere Client 🚀
 
-> **Real-time Team Collaboration & Task Management Frontend**  
-> React 19 + TypeScript + Socket.IO + Zustand
+> **Complete Team Collaboration & Task Management Frontend**  
+> React 19 + TypeScript + Socket.IO + Zustand + CSS Modules
 
-TeamSphere는 팀 협업을 위한 완전한 워크스페이스 관리 플랫폼입니다. 이 클라이언트 애플리케이션은 React와 TypeScript로 구축되었으며, 실시간 메시징과 하이브리드 데이터베이스를 활용한 팀, 작업, 메시징을 통합 관리할 수 있습니다.
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-010101?style=flat&logo=socket.io&logoColor=white)](https://socket.io/)
+[![Zustand](https://img.shields.io/badge/Zustand-FF6B6B?style=flat)](https://zustand-demo.pmnd.rs/)
 
-## 주요 기능
+TeamSphere는 팀 협업을 위한 완전한 워크스페이스 관리 플랫폼입니다. 이 클라이언트 애플리케이션은 React 19와 TypeScript로 구축되었으며, 실시간 메시징, 하이브리드 데이터베이스, 그리고 포괄적인 팀 관리 기능을 제공합니다.
 
-### 🔐 인증 시스템
-- JWT 기반 회원가입/로그인
-- 보안 쿠키를 통한 세션 관리
-- 프로필 관리
+## ✨ 주요 기능
 
-### 🏢 워크스페이스 관리
-- 워크스페이스 생성 및 관리
+### 🔐 **완전한 인증 시스템**
+- JWT 기반 회원가입/로그인/로그아웃
+- 보안 쿠키를 통한 자동 세션 관리
+- 사용자 프로필 생성 및 관리 (이름, 프로필 이미지, 연락처)
+- Protected Routes로 인증된 사용자만 접근 가능
+
+### 🏢 **워크스페이스 관리**
+- 워크스페이스 생성, 조회, 수정
 - 멤버 초대 및 역할 관리 (Admin, Manager, Member, Viewer)
-- 활동 로그 추적
+- 워크스페이스 대시보드 (멤버, 팀, 활동 현황)
+- 활동 로그 실시간 추적
 
-### 👥 팀 관리
-- 워크스페이스 내 팀 생성
-- 팀 멤버 관리
-- 팀별 작업 할당
+### 👥 **팀 관리**
+- 워크스페이스 내 팀 생성 및 관리
+- 팀 멤버 추가/제거 및 역할 관리 (Leader, Member)
+- 팀별 작업 할당 및 진행 상황 추적
+- 팀 상세 페이지 (작업, 멤버, 채팅 탭)
 
-### ✅ 작업 관리
-- MySQL 기반 기본 작업 관리
-- MongoDB 기반 상세 작업 정보
-- 댓글 시스템
-- 작업 상태 및 우선순위 관리
+### ✅ **하이브리드 작업 관리**
+- **MySQL 기반**: 기본 작업 정보 (상태, 우선순위, 할당자)
+- **MongoDB 기반**: 상세 작업 정보 (제목, 내용, 태그, 첨부파일)
+- **댓글 시스템**: 대댓글, 멘션, 편집 이력 지원
+- **작업 상태**: TODO, IN_PROGRESS, DONE, CANCELLED
+- **우선순위**: LOW, MEDIUM, HIGH, URGENT
 
-### 💬 실시간 메시징 시스템
+### 💬 **실시간 메시징 시스템**
 - **Socket.IO 기반 실시간 통신**
-- **채팅방 관리**: DM, 팀 채팅, 워크스페이스 채팅
+- **다중 채팅방**: DM, 팀 채팅, 워크스페이스 채팅
 - **메시지 기능**: 텍스트, 이미지, 파일 메시지 지원
-- **실시간 업데이트**: 방 목록 자동 정렬, 새 메시지 알림
-- **MongoDB 기반**: 확장 가능한 메시지 저장
+- **고급 기능**: 메시지 수정/삭제, 편집 이력, 실시간 알림
+- **자동 정렬**: 마지막 메시지 시간 기준 채팅방 정렬
+- **온라인 상태**: 실시간 사용자 온라인 상태 표시
 
-## 기술 스택
+### 📊 **대시보드 & 분석**
+- 개인 대시보드 (참여 워크스페이스, 최근 활동, 출석 현황)
+- 워크스페이스 대시보드 (팀 현황, 멤버 활동, 작업 진행률)
+- 실시간 활동 로그 및 알림
+- 출석 관리 시스템
 
-- **Frontend**: React 19, TypeScript
-- **상태 관리**: Zustand
-- **라우팅**: React Router v7
-- **HTTP 클라이언트**: Axios
-- **실시간 통신**: Socket.IO Client
-- **스타일링**: CSS Modules
-- **빌드 도구**: Create React App
-- **인증**: JWT 토큰 (쿠키 기반)
+## 🛠️ 기술 스택
 
-## 프로젝트 구조
+### **Frontend Framework**
+- **React 19** - 최신 React 기능 활용
+- **TypeScript** - 정적 타입 검사 및 개발 생산성 향상
+
+### **상태 관리 & 라우팅**
+- **Zustand** - 경량 상태 관리 라이브러리
+- **React Router v7** - 클라이언트 사이드 라우팅
+
+### **통신 & 데이터**
+- **Axios** - HTTP 클라이언트 (API 통신)
+- **Socket.IO Client** - 실시간 양방향 통신
+- **JWT 토큰** - 쿠키 기반 인증 시스템
+
+### **UI & 스타일링**
+- **CSS Modules** - 컴포넌트 스코프 스타일링
+- **반응형 디자인** - 모바일/데스크톱 지원
+- **모던 UI/UX** - 직관적이고 깔끔한 인터페이스
+
+### **개발 도구**
+- **Create React App** - 빌드 도구 및 개발 환경
+- **ESLint & Prettier** - 코드 품질 및 포맷팅
+
+## 📁 프로젝트 구조
 
 ```
 client/
 ├── public/
-│   └── index.html
+│   ├── iconTitle.png          # 앱 아이콘
+│   └── index.html             # HTML 템플릿
 ├── src/
-│   ├── api/              # API 서비스 레이어
-│   │   ├── user/         # 사용자 관련 API
-│   │   │   ├── auth/     # 인증 API
-│   │   │   ├── profile/  # 프로필 API
-│   │   │   └── rooms/    # 채팅방 API
-│   │   └── workspace/    # 워크스페이스 API
-│   ├── components/       # 재사용 가능한 컴포넌트
-│   │   ├── common/       # 공통 컴포넌트
-│   │   ├── layout/       # 레이아웃 컴포넌트
-│   │   └── ui/           # UI 컴포넌트
-│   ├── config/           # 설정 파일
-│   │   └── api.ts        # API 기본 설정
-│   ├── hooks/            # 커스텀 훅
-│   │   ├── useSocket.ts  # Socket.IO 훅
-│   │   └── useAuth.ts    # 인증 훅
-│   ├── pages/            # 페이지 컴포넌트
-│   │   ├── auth/         # 인증 페이지
-│   │   ├── user/         # 사용자 페이지
-│   │   │   ├── Rooms.tsx      # 채팅방 목록
-│   │   │   └── RoomDetail.tsx # 채팅방 상세
-│   │   └── workspace/    # 워크스페이스 페이지
-│   ├── store/            # Zustand 상태 관리
-│   │   ├── authStore.ts
-│   │   ├── roomStore.ts  # 채팅방 상태
-│   │   └── socketStore.ts # Socket 상태
-│   ├── styles/           # CSS 모듈
-│   │   ├── global.css
-│   │   └── *.module.css
-│   ├── types/            # TypeScript 타입 정의
-│   │   ├── api.ts
-│   │   ├── socket.ts     # Socket 이벤트 타입
-│   │   └── room.ts       # 채팅방 타입
-│   └── App.tsx
-├── package.json
-└── README.md
+│   ├── api/                   # API 서비스 레이어 (7개 파일)
+│   │   ├── authAPI.ts         # 인증 관련 API
+│   │   ├── workspaceAPI.ts    # 워크스페이스 관리 API
+│   │   ├── teamAPI.ts         # 팀 관리 API
+│   │   ├── taskAPI.ts         # 작업 및 MongoDB 작업, 댓글 API
+│   │   ├── messageAPI.ts      # DM, 팀, 워크스페이스 메시징 API
+│   │   ├── profileAPI.ts      # 프로필 관리 API
+│   │   └── activityAPI.ts     # 활동 로그 API
+│   ├── components/            # 재사용 가능한 UI 컴포넌트
+│   │   ├── Button.tsx         # 다양한 variant 지원 버튼
+│   │   └── LoadingSpinner.tsx # 로딩 스피너
+│   ├── config/                # 설정 파일
+│   │   └── api.ts             # Axios 기본 설정 및 인터셉터
+│   ├── pages/                 # 페이지 컴포넌트 (8개 파일)
+│   │   ├── Dashboard.tsx      # 개인 대시보드
+│   │   ├── WorkspaceList.tsx  # 워크스페이스 목록
+│   │   ├── WorkspaceDetail.tsx# 워크스페이스 상세 (개요, 팀, 멤버 탭)
+│   │   ├── TeamDetail.tsx     # 팀 상세 (작업, 멤버, 채팅 탭)
+│   │   ├── TaskDetail.tsx     # 작업 상세 (MongoDB 작업, 댓글)
+│   │   ├── ProfilePage.tsx    # 프로필 관리
+│   │   ├── MessagesPage.tsx   # DM 메시징 시스템
+│   │   └── NotFound.tsx       # 404 페이지
+│   ├── store/                 # Zustand 상태 관리 (5개 파일)
+│   │   ├── authStore.ts       # 사용자 인증 상태
+│   │   ├── workspaceStore.ts  # 워크스페이스 및 멤버 관리
+│   │   ├── teamStore.ts       # 팀 및 팀 멤버 관리
+│   │   ├── taskStore.ts       # 작업, MongoDB 작업, 댓글 관리
+│   │   └── messageStore.ts    # 메시지 및 채팅방 관리
+│   ├── styles/                # CSS Modules 스타일
+│   │   ├── global.css         # 전역 스타일
+│   │   └── *.module.css       # 컴포넌트별 스타일 (반응형)
+│   ├── types/                 # TypeScript 타입 정의
+│   │   └── api.ts             # 모든 API 타입 정의
+│   ├── utils/                 # 유틸리티 함수
+│   │   └── ProtectedRoute.tsx # 인증 보호 라우트
+│   ├── App.tsx                # 메인 앱 컴포넌트 (라우팅)
+│   └── index.tsx              # 앱 진입점
+├── package.json               # 의존성 및 스크립트
+├── tsconfig.json              # TypeScript 설정
+└── README.md                  # 프로젝트 문서
 ```
 
 ## 설치 및 실행
@@ -123,14 +158,29 @@ npm run build
 
 이 클라이언트는 TeamSphere 서버 API와 연동됩니다. 서버가 실행 중이어야 모든 기능이 정상 작동합니다.
 
-### 주요 API 엔드포인트
-- `/v1/auth/*` - 인증 관련 (회원가입/로그인/토큰 검증)
-- `/v1/workspace/*` - 워크스페이스 관리
-- `/v1/workspace/:id/teams/*` - 팀 관리
-- `/v1/workspace/:id/members/*` - 멤버 관리
-- `/v1/workspace/:id/message/*` - 실시간 메시징 시스템
-- `/v1/user/profile/*` - 사용자 프로필 관리
-- **Socket.IO**: 실시간 이벤트 (`join_room`, `send_message`, `room_updated`)
+### 🔗 API 연동 현황
+
+**서버 API 문서**: `http://localhost:8080/docs` (Swagger UI)
+
+#### **완전 연동된 API 카테고리 (80+ 엔드포인트)**
+- **인증 API** (`/v1/auth/*`) - 회원가입/로그인/로그아웃
+- **대시보드 API** (`/v1/dashboard`) - 종합 대시보드 데이터
+- **사용자 API** (`/v1/user/*`) - 사용자 정보 및 출석 관리
+- **프로필 API** (`/v1/user/profile/*`) - 프로필 생성/조회/수정
+- **워크스페이스 API** (`/v1/workspace/*`) - 워크스페이스 관리
+- **팀 API** (`/v1/workspace/:id/teams/*`) - 팀 생성/관리
+- **멤버 API** (`/v1/workspace/:id/members/*`) - 멤버 초대/역할 관리
+- **작업 API** (`/v1/workspace/:id/teams/:id/member/:id/tasks/*`) - MySQL 작업
+- **MongoDB 작업 API** - 상세 작업 정보 및 댓글 시스템
+- **메시징 API** (`/v1/workspace/:id/message/*`) - 실시간 메시징
+- **DM API** (`/v1/user/rooms/*`) - 개인 메시징
+- **활동 로그 API** (`/v1/workspace/:id/activityLog/*`) - 활동 추적
+
+#### **실시간 통신 (Socket.IO)**
+- `join_room` - 채팅방 입장
+- `leave_room` - 채팅방 퇴장  
+- `send_message` - 메시지 전송
+- `room_updated` - 실시간 방 업데이트
 
 ## 상태 관리
 
