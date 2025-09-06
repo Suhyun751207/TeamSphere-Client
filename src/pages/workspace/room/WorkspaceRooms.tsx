@@ -10,8 +10,8 @@ interface WorkspaceRoom {
     roomId: number;
     userId: number;
     lastMessageId: number | null;
-    room: [{ 
-        title: string; 
+    room: [{
+        title: string;
         lastMessageId: number | null;
     }];
     createdAt: string;
@@ -29,6 +29,10 @@ interface Member {
 
 interface MemberWithProfile extends Member {
     userName?: string;
+    name?:string;
+    imagePath?:string;
+    phone?:string;
+    subscriptionState?:string;
 }
 
 function WorkspaceRooms() {
@@ -41,6 +45,9 @@ function WorkspaceRooms() {
     const [error, setError] = useState<string | null>(null);
     const [membersLoading, setMembersLoading] = useState(false);
     const [lastMessages, setLastMessages] = useState<{ [key: number]: string }>({});
+    const [inviteUserId, setInviteUserId] = useState('');
+    const [inviting, setInviting] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
 
     const isRoomDetailPage = location.pathname.includes(`/workspace/${workspaceId}/room/`) && roomId;
 
@@ -109,15 +116,38 @@ function WorkspaceRooms() {
 
         try {
             setMembersLoading(true);
-            // Note: We'll need to implement room members API for workspace rooms
-            // For now, we'll use a placeholder
-            setMembers([]);
+            const res = await WorkspaceServer.WorkspaceMemberList(Number(workspaceId), Number(roomId));
+            const memberProfiles = await Promise.all(
+                res.data.members.map(async (member: any) => {
+                    const profileRes = await ProfileService.getProfile(member.userId);
+                    return profileRes.data.profile;
+                })
+            );
+            setMembers(memberProfiles);
         } catch (err) {
             console.error('Failed to load members:', err);
         } finally {
             setMembersLoading(false);
         }
     }, [roomId, workspaceId]);
+
+    const inviteUser = async () => {
+        if (!inviteUserId || !workspaceId || !roomId) return;
+
+        try {
+            setInviting(true);
+            await WorkspaceServer.WorkspaceRoomMemberAdd(Number(workspaceId), Number(roomId), Number(inviteUserId));
+            setInviteUserId('');
+            setShowInviteModal(false);
+            await loadMembers();
+        } catch (err: any) {
+            console.error('Failed to invite user:', err);
+            const errorMessage = err.response?.data?.message || '사용자 초대에 실패했습니다.';
+            alert(errorMessage);
+        } finally {
+            setInviting(false);
+        }
+    };
 
     const createRoom = async () => {
         if (!workspaceId) return;
@@ -281,20 +311,32 @@ function WorkspaceRooms() {
                 )}
             </div>
 
+            <div className={styles.content}>
+                <Outlet />
+            </div>
+
             {isRoomDetailPage && (
                 <div className={styles.rightNavbar}>
                     <div className={styles.navbarHeader}>
                         <h3>Members</h3>
                         <div className={styles.headerActions}>
                             {membersLoading && <div className={styles.loadingSpinner}></div>}
+                            <button 
+                                onClick={() => setShowInviteModal(true)} 
+                                className={styles.addUserButton}
+                                disabled={membersLoading}
+                                title="Add User"
+                            >
+                                +
+                            </button>
                         </div>
                     </div>
                     <div className={styles.membersList}>
-                        {members.length > 0 ? (
+                        {members? (
                             members.map((member) => (
-                                <div key={member.id} className={styles.memberItem}>
+                                <div key={member.userId} className={styles.memberItem}>
                                     <div className={styles.memberInfo}>
-                                        <span className={styles.memberName}>{member.userName}</span>
+                                        <span className={styles.memberName}>{member.name}</span>
                                         <span className={styles.memberDate}>
                                             {formatDate(member.createdAt)}
                                         </span>
@@ -310,9 +352,39 @@ function WorkspaceRooms() {
                 </div>
             )}
 
-            <div className={styles.content}>
-                <Outlet />
-            </div>
+            {/* Invite User Modal */}
+            {showInviteModal && (
+                <div className={styles.modal}>
+                    <div className={styles.modalContent}>
+                        <h3>사용자 초대</h3>
+                        <input
+                            type="number"
+                            placeholder="사용자 ID 입력"
+                            value={inviteUserId}
+                            onChange={(e) => setInviteUserId(e.target.value)}
+                            className={styles.inviteInput}
+                        />
+                        <div className={styles.modalActions}>
+                            <button
+                                onClick={inviteUser}
+                                disabled={inviting || !inviteUserId}
+                                className={styles.inviteButton}
+                            >
+                                {inviting ? '초대 중...' : '초대'}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowInviteModal(false);
+                                    setInviteUserId('');
+                                }}
+                                className={styles.cancelButton}
+                            >
+                                취소
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

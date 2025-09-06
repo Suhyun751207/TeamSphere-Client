@@ -31,6 +31,12 @@ async function WorkspaceRoomCreate(workspaceId: number, data: RoomCreateRequest)
     return await api.post(`/workspace/${workspaceId}/message`, data);
 }
 
+// 워크스페이스 룸 멤버 목록 조회
+async function WorkspaceMemberList(workspaceId: number, roomId: number) {
+    return await api.get(`/workspace/${workspaceId}/message/${roomId}`);
+}
+
+
 // 워크스페이스 룸 메시지 목록 조회
 async function WorkspaceMessageList(workspaceId: number, roomId: number) {
     return await api.get(`/workspace/${workspaceId}/message/${roomId}/message`);
@@ -46,6 +52,10 @@ async function WorkspaceRoomLastMessageUpdate(workspaceId: number, roomId: numbe
     return await api.patch(`/workspace/${workspaceId}/message/${roomId}/${messageId}`);
 }
 
+async function WorkspaceRoomMemberAdd(workspaceId: number, roomId: number, userId: number) {
+    return await api.post(`/workspace/${workspaceId}/message/${roomId}/${userId}/add`);
+}
+
 const WorkspaceServer = {
     WorkspaceList,
     WorkspaceCreate,
@@ -53,9 +63,11 @@ const WorkspaceServer = {
     WorkspaceUpdate,
     WorkspaceRoomList,
     WorkspaceRoomCreate,
+    WorkspaceMemberList,
     WorkspaceMessageList,
     WorkspaceMessageCreate,
-    WorkspaceRoomLastMessageUpdate
+    WorkspaceRoomLastMessageUpdate,
+    WorkspaceRoomMemberAdd
 };
 
 export default WorkspaceServer;
