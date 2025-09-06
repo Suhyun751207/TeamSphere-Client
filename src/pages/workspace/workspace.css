@@ -451,6 +451,7 @@
     border-radius: 14px;
     border: 1px solid #eef2f7;
     overflow: hidden;
+    grid-column: span 12;
 }
 
 .workspace-toolbar {

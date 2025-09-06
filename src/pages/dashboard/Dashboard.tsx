@@ -133,21 +133,6 @@ export default function Dashboard() {
         }
     };
 
-    const getMonthLabels = (): string[] => {
-        const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-        const endDate = new Date();
-        const labels: string[] = [];
-
-        // Show last 12 months
-        for (let i = 11; i >= 0; i--) {
-            const monthDate = new Date(endDate.getFullYear(), endDate.getMonth() - i, 1);
-            labels.push(months[monthDate.getMonth()]);
-        }
-
-        return labels;
-    };
-
-
     const generateMonthlyCalendarData = (): MonthData[] => {
         const today = new Date();
         const todayStr = today.toDateString();
@@ -372,7 +357,7 @@ export default function Dashboard() {
                 <section className="dashboard-table-card card">
                     <div className="dashboard-toolbar">
                         <div className="dashboard-tabs">
-                            <a className="active" href="#">활동 로그</a>
+                            <p className="active">활동 로그</p>
                         </div>
                         <div className="dashboard-sp"></div>
                         <span className="dashboard-l">총 {activityLog.length}개</span>

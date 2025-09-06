@@ -18,13 +18,6 @@ interface Room {
     };
 }
 
-interface Message {
-    id: number;
-    content: string;
-    userId: number;
-    createdAt: string;
-}
-
 interface Member {
     id: number;
     roomId: number;
@@ -274,13 +267,6 @@ function Rooms() {
                         <h3>My Rooms</h3>
                     </div>
                     <div className={styles.headerActions}>
-                        <div className={styles.connectionStatus}>
-                            {isConnected ? (
-                                <span className={styles.connected}>🟢 실시간</span>
-                            ) : (
-                                <span className={styles.disconnected}>🔴 오프라인</span>
-                            )}
-                        </div>
                         <button 
                             onClick={createRoom} 
                             className={styles.refreshButton}
