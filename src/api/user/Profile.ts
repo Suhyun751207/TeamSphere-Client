@@ -17,11 +17,16 @@ async function ProfileUserUpdate(userId: number, data: profilesUpdate) {
     return await api.patch(`/user/profile/${userId}`, data)
 }
 
+async function getMe() {
+    return await api.get("/user/profile/me")
+}
+
 const ProfileServer = {
     ProfileAllGet,
     ProfileCreate,
     ProfileUserGet,
-    ProfileUserUpdate
+    ProfileUserUpdate,
+    getMe
 }
 
 export default ProfileServer;

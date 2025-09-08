@@ -142,25 +142,32 @@ function RoomDetail() {
 
         try {
             if (isConnected) {
-                // Send via Socket.IO for real-time delivery (Socket server handles DB creation)
                 sendSocketMessage(parseInt(roomId), messageContent);
                 
-                // Add optimistic message to local state for immediate feedback
-                const getUserIdFromCookie = (): number => {
-                    const cookies = document.cookie.split(';');
-                    for (let cookie of cookies) {
-                        const [name, value] = cookie.trim().split('=');
-                        if (name === 'userId') {
-                            return parseInt(decodeURIComponent(value)) || 0;
+                let userName = currentUserName;
+                let currentUserId = getUserIdFromCookie();
+                
+                if (!userName || currentUserId === 0) {
+                    try {
+                        // If getUserIdFromCookie returns 0, try to get from ProfileAllGet like fetchCurrentUser does
+                        if (currentUserId === 0) {
+                            const profileAllRes = await ProfileService.ProfileAllGet();
+                            // Extract userId from ProfileAllGet response if available
+                            currentUserId = profileAllRes.data.user?.id || profileAllRes.data.profile?.userId || 0;
                         }
+                        const profileRes = await ProfileService.getMe();
+                        userName = profileRes.data.profile.name;
+                    } catch (err) {
+                        console.error('Failed to get user info:', err);
+                        userName = currentUserId > 0 ? `User ${currentUserId}` : 'Unknown User';
                     }
-                    return 0;
-                };
-
+                }
+                
+                // Add optimistic message to UI immediately
                 const optimisticMessage: MessageWithProfile & { isOptimistic?: boolean } = {
                     id: Date.now(), // Temporary ID
                     roomId: parseInt(roomId),
-                    userId: getUserIdFromCookie(),
+                    userId: currentUserId, // Use the corrected userId
                     type: 'TEXT',
                     content: messageContent,
                     imagePath: null,
@@ -168,7 +175,7 @@ function RoomDetail() {
                     isValid: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    userName: currentUserName,
+                    userName: userName,
                     isOptimistic: true // Flag to identify optimistic messages
                 };
                 
@@ -201,49 +208,9 @@ function RoomDetail() {
                 // Store timeout ID for cleanup
                 (optimisticMessage as any).timeoutId = timeoutId;
             } else {
+                // When not connected to Socket.IO, create message in DB only
                 const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
                 if (messageRes.data && messageRes.data.insertId) {
-                    // Add message to local state for immediate feedback
-                    // Helper function to get userId from cookies
-                    const getUserIdFromCookie = (): number => {
-                        const cookies = document.cookie.split(';');
-                        for (let cookie of cookies) {
-                            const [name, value] = cookie.trim().split('=');
-                            if (name === 'userId') {
-                                return parseInt(decodeURIComponent(value)) || 0;
-                            }
-                        }
-                        return 0;
-                    };
-
-                    const newMessageObj: MessageWithProfile = {
-                        id: messageRes.data.insertId,
-                        roomId: parseInt(roomId),
-                        userId: getUserIdFromCookie(),
-                        type: 'TEXT',
-                        content: messageContent,
-                        imagePath: null,
-                        isEdited: false,
-                        isValid: true,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        userName: currentUserName
-                    };
-                    setMessages(prev => {
-                        // Check if message already exists to avoid duplicates
-                        const exists = prev.some(msg => msg.id === newMessageObj.id);
-                        if (exists) return prev;
-                        
-                        // Additional check for duplicate content and timestamp to prevent race conditions
-                        const duplicateContent = prev.some(msg => 
-                            msg.content === newMessageObj.content && 
-                            msg.userId === newMessageObj.userId &&
-                            Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessageObj.createdAt).getTime()) < 1000
-                        );
-                        if (duplicateContent) return prev;
-                        
-                        return [...prev, newMessageObj];
-                    });
                     try {
                         await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
                         window.dispatchEvent(new CustomEvent('roomUpdated'));
@@ -278,13 +245,33 @@ function RoomDetail() {
         }
     };
 
+    // Helper function to get userId from cookies
+    const getUserIdFromCookie = (): number => {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'userId') {
+                return parseInt(decodeURIComponent(value)) || 0;
+            }
+        }
+        return 0;
+    };
+
     const fetchCurrentUser = async () => {
         try {
             const profileRes = await ProfileService.ProfileAllGet();
-            setCurrentUserName(profileRes.data.user?.name || profileRes.data.profile?.name || 'You');
+            const userName = profileRes.data.user?.name || profileRes.data.profile?.name;
+            if (userName) {
+                setCurrentUserName(userName);
+            } else {
+                // If no name found, try to get userId and set fallback
+                const userId = getUserIdFromCookie();
+                setCurrentUserName(`User ${userId}`);
+            }
         } catch (err) {
             console.error('Failed to fetch current user:', err);
-            setCurrentUserName('You');
+            const userId = getUserIdFromCookie();
+            setCurrentUserName(`User ${userId}`);
         }
     };
 
@@ -498,9 +485,8 @@ function RoomDetail() {
 
     // Load members when room changes or online users change
     useEffect(() => {
-        loadRoomData();
         loadMembers();
-    }, [loadRoomData, loadMembers]);
+    }, [loadMembers]);
 
     useEffect(() => {
         loadRoomData();
