@@ -3,37 +3,9 @@ import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import WorkspaceServer from "../../../api/workspace/workspace";
 import ProfileService from "../../../api/user/profile/profile";
 import useSocket from "../../../hooks/useSocket";
+import { WorkspaceRoom } from '../../../interface/Room';
+import { Member, MemberWithProfile } from '../../../interface/Member';
 import styles from './WorkspaceRooms.module.css';
-
-interface WorkspaceRoom {
-    id: number;
-    roomId: number;
-    userId: number;
-    lastMessageId: number | null;
-    room: [{
-        title: string;
-        lastMessageId: number | null;
-    }];
-    createdAt: string;
-    lastMessageTime?: string;
-    title?: string;
-}
-
-interface Member {
-    id: number;
-    roomId: number;
-    userId: number;
-    lastMessageId: number | null;
-    createdAt: string;
-}
-
-interface MemberWithProfile extends Member {
-    userName?: string;
-    name?:string;
-    imagePath?:string;
-    phone?:string;
-    subscriptionState?:string;
-}
 
 function WorkspaceRooms() {
     const navigate = useNavigate();

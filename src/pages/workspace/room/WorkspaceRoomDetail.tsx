@@ -3,33 +3,9 @@ import { useParams } from 'react-router-dom';
 import WorkspaceServer from "../../../api/workspace/workspace";
 import ProfileService from "../../../api/user/profile/profile";
 import useSocket from "../../../hooks/useSocket";
+import { Message, MessageWithProfile } from '../../../interface/Message';
+import { Member } from '../../../interface/Member';
 import styles from './WorkspaceRoomDetail.module.css';
-
-interface Message {
-    id: number;
-    roomId: number;
-    userId: number;
-    content: string;
-    messageType: "TEXT" | "IMAGE" | "FILE";
-    isEdited: boolean;
-    isDeleted: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface MessageWithProfile extends Message {
-    userName?: string;
-}
-
-interface Member {
-    id: number;
-    roomId: number;
-    userId: number;
-    lastMessageId: number | null;
-    createdAt: string;
-    userName?: string;
-    isOnline?: boolean;
-}
 
 function WorkspaceRoomDetail() {
     const { workspaceId, roomId } = useParams<{ workspaceId: string; roomId: string }>();
@@ -125,28 +101,63 @@ function WorkspaceRoomDetail() {
 
         try {
             if (isConnected) {
-                // Send via Socket.IO for real-time delivery
+                // Send via Socket.IO for real-time delivery (Socket server handles DB creation)
                 sendSocketMessage(parseInt(roomId), messageContent);
                 
-                // Create the message in DB and update room's last message
-                try {
-                    const messageRes = await WorkspaceServer.WorkspaceMessageCreate(
-                        Number(workspaceId), 
-                        Number(roomId), 
-                        { content: messageContent, messageType: "TEXT" }
-                    );
-                    if (messageRes.data && messageRes.data.insertId) {
-                        // Update room's last message ID
-                        await WorkspaceServer.WorkspaceRoomLastMessageUpdate(
-                            Number(workspaceId), 
-                            Number(roomId), 
-                            messageRes.data.insertId
-                        );
-                        window.dispatchEvent(new CustomEvent('roomUpdated'));
+                // Add optimistic message to local state for immediate feedback
+                const getUserIdFromCookie = (): number => {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if (name === 'userId') {
+                            return parseInt(decodeURIComponent(value)) || 0;
+                        }
                     }
-                } catch (updateErr) {
-                    console.error('Failed to update workspace room lastMessageId after socket message:', updateErr);
-                }
+                    return 0;
+                };
+
+                const optimisticMessage: MessageWithProfile & { isOptimistic?: boolean } = {
+                    id: Date.now(), // Temporary ID
+                    roomId: parseInt(roomId),
+                    userId: getUserIdFromCookie(),
+                    content: messageContent,
+                    messageType: "TEXT",
+                    isEdited: false,
+                    isDeleted: false,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    userName: currentUserName,
+                    isOptimistic: true // Flag to identify optimistic messages
+                };
+                
+                setMessages(prev => [...prev, optimisticMessage]);
+                setTimeout(scrollToBottom, 100);
+                
+                // Set a timeout to check if Socket.IO message was successful
+                const timeoutId = setTimeout(() => {
+                    // Check if the optimistic message is still there (not replaced by real message)
+                    setMessages(currentMessages => {
+                        const stillOptimistic = currentMessages.some(msg => 
+                            (msg as any).isOptimistic && 
+                            msg.content === messageContent &&
+                            msg.userId === getUserIdFromCookie()
+                        );
+                        
+                        if (stillOptimistic) {
+                            console.log('Socket.IO message timeout, removing optimistic message');
+                            // Remove the optimistic message if Socket.IO failed
+                            return currentMessages.filter(msg => 
+                                !(msg as any).isOptimistic || 
+                                msg.content !== messageContent ||
+                                msg.userId !== getUserIdFromCookie()
+                            );
+                        }
+                        return currentMessages;
+                    });
+                }, 5000); // 5 second timeout
+                
+                // Store timeout ID for cleanup
+                (optimisticMessage as any).timeoutId = timeoutId;
             } else {
                 const messageRes = await WorkspaceServer.WorkspaceMessageCreate(
                     Number(workspaceId), 
@@ -252,6 +263,7 @@ function WorkspaceRoomDetail() {
 
         // Listen for new messages
         const unsubscribeNewMessage = onNewMessage(async (message) => {
+            console.log('Received new message via Socket.IO:', message);
             try {
                 // Get user profile for the message
                 const profileRes = await ProfileService.getProfile(message.userId);
@@ -259,7 +271,7 @@ function WorkspaceRoomDetail() {
                 
                 const messageWithProfile: MessageWithProfile = {
                     ...message,
-                    messageType: "TEXT",
+                    messageType: (message.type === "IMAGE" || message.type === "FILE") ? message.type : "TEXT",
                     isDeleted: false,
                     createdAt: new Date(message.createdAt).toISOString(),
                     updatedAt: new Date(message.updatedAt).toISOString(),
@@ -267,10 +279,31 @@ function WorkspaceRoomDetail() {
                 };
 
                 setMessages(prev => {
-                    // Check if message already exists to avoid duplicates
-                    const exists = prev.some(msg => msg.id === message.id);
-                    if (exists) return prev;
-                    return [...prev, messageWithProfile];
+                    // Clear timeout for optimistic message if it exists
+                    const optimisticMsg = prev.find(msg => 
+                        (msg as any).isOptimistic && 
+                        msg.content === message.content && 
+                        msg.userId === message.userId
+                    );
+                    if (optimisticMsg && (optimisticMsg as any).timeoutId) {
+                        clearTimeout((optimisticMsg as any).timeoutId);
+                    }
+                    
+                    // Remove optimistic message if it exists (same content and user)
+                    const filteredMessages = prev.filter(msg => 
+                        !(msg as any).isOptimistic || 
+                        msg.content !== message.content || 
+                        msg.userId !== message.userId
+                    );
+                    
+                    // Check if real message already exists to avoid duplicates
+                    const exists = filteredMessages.some(msg => msg.id === message.id);
+                    if (exists) {
+                        console.log('Message already exists, skipping:', message.id);
+                        return filteredMessages;
+                    }
+                    console.log('Adding new message to state:', message.id);
+                    return [...filteredMessages, messageWithProfile];
                 });
 
                 setTimeout(scrollToBottom, 100);
@@ -279,7 +312,7 @@ function WorkspaceRoomDetail() {
                 console.error('Failed to load profile for new message:', err);
                 const messageWithProfile: MessageWithProfile = {
                     ...message,
-                    messageType: "TEXT",
+                    messageType: (message.type === "IMAGE" || message.type === "FILE") ? message.type : "TEXT",
                     isDeleted: false,
                     createdAt: new Date(message.createdAt).toISOString(),
                     updatedAt: new Date(message.updatedAt).toISOString(),
@@ -287,11 +320,29 @@ function WorkspaceRoomDetail() {
                 };
                 
                 setMessages(prev => {
-                    const exists = prev.some(msg => msg.id === message.id);
-                    if (exists) return prev;
-                    return [...prev, messageWithProfile];
+                    // Clear timeout for optimistic message if it exists
+                    const optimisticMsg = prev.find(msg => 
+                        (msg as any).isOptimistic && 
+                        msg.content === message.content && 
+                        msg.userId === message.userId
+                    );
+                    if (optimisticMsg && (optimisticMsg as any).timeoutId) {
+                        clearTimeout((optimisticMsg as any).timeoutId);
+                    }
+                    
+                    // Remove optimistic message if it exists
+                    const filteredMessages = prev.filter(msg => 
+                        !(msg as any).isOptimistic || 
+                        msg.content !== message.content || 
+                        msg.userId !== message.userId
+                    );
+                    
+                    const exists = filteredMessages.some(msg => msg.id === message.id);
+                    if (exists) return filteredMessages;
+                    return [...filteredMessages, messageWithProfile];
                 });
                 setTimeout(scrollToBottom, 100);
+                window.dispatchEvent(new CustomEvent('roomUpdated'));
             }
         });
 
@@ -299,6 +350,9 @@ function WorkspaceRoomDetail() {
         const unsubscribeMessageError = onMessageError((error) => {
             console.error('Socket message error:', error);
             setError(`Message error: ${error.error}`);
+            
+            // Remove failed optimistic messages
+            setMessages(prev => prev.filter(msg => !(msg as any).isOptimistic));
         });
 
         // Helper function to get userId from cookies

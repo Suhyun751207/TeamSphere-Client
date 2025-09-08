@@ -2,20 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ProfileServer from "../../../api/user/Profile";
 import ProfileService from "../../../api/user/profile/profile";
+import { ProfileData } from "../../../interface/ProfileData";
 import "./Profile.css";
-
-interface ProfileData {
-    userId: number;
-    name: string;
-    age: number;
-    gender: string;
-    phone: string;
-    imagePath?: string;
-    user?: {
-        id: number;
-        email: string;
-    };
-}
 
 function Profile() {
     const [mergedData, setMergedData] = useState<ProfileData[]>([]);

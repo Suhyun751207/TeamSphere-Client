@@ -5,6 +5,7 @@ import AttendanceService from "../../api/user/Attendance";
 import WorkspaceServer from "../../api/workspace/workspace";
 import RoomsService from "../../api/user/rooms/rooms";
 import { DashboardData, CalendarDay, MonthData } from "../../interface/Dashboard";
+import { WorkspaceCreateRequest } from "../../interface/Workspace";
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -14,6 +15,11 @@ export default function Dashboard() {
     const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
     const [workspaceNames, setWorkspaceNames] = useState<{ [key: number]: string }>({});
     const [lastMessages, setLastMessages] = useState<{ [key: number]: string }>({});
+    const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+    const [workspaceFormData, setWorkspaceFormData] = useState<WorkspaceCreateRequest>({
+        name: '',
+        description: ''
+    });
 
     useEffect(() => {
         DashboardService.Getdashboard().then((res) => {
@@ -102,6 +108,53 @@ export default function Dashboard() {
 
     const handleWorkspaceClick = (workspaceId: number) => {
         navigate(`/workspace/${workspaceId}`);
+    };
+
+    const createRoom = async () => {
+        try {
+            setLoading(true);
+            await RoomsService.RoomsCreate();
+            
+            // Refresh dashboard data to show new room
+            const res = await DashboardService.Getdashboard();
+            setDashboardData(res.data);
+            
+            alert("방 생성 완료");
+        } catch (err) {
+            console.error('Failed to create room:', err);
+            alert('방 생성에 실패했습니다');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const createWorkspace = async () => {
+        try {
+            setLoading(true);
+            await WorkspaceServer.WorkspaceCreate(workspaceFormData);
+            
+            // Refresh dashboard data to show new workspace
+            const res = await DashboardService.Getdashboard();
+            setDashboardData(res.data);
+            
+            // Reset form and close modal
+            setWorkspaceFormData({ name: '', description: '' });
+            setShowWorkspaceModal(false);
+            
+            alert("워크스페이스 생성 완료");
+        } catch (err) {
+            console.error('Failed to create workspace:', err);
+            alert('워크스페이스 생성에 실패했습니다');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleWorkspaceFormChange = (field: keyof WorkspaceCreateRequest, value: string) => {
+        setWorkspaceFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
     // Flatten arrays for easier processing
@@ -309,6 +362,25 @@ export default function Dashboard() {
                     <div className="head">
                         <h3>워크스페이스 목록</h3>
                         <span className="l">총 {flatWorkspaces.length}개</span>
+                        <button 
+                            onClick={() => setShowWorkspaceModal(true)} 
+                            className="create-workspace-button"
+                            disabled={loading}
+                            title="Create new workspace"
+                            style={{
+                                marginLeft: 'auto',
+                                padding: '8px 12px',
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                            }}
+                        >
+                            {loading ? '⟳' : '+'}
+                        </button>
                     </div>
                     <div className="workspace-list-dashboard">
                         {flatWorkspaces.map((workspace) => (
@@ -332,10 +404,29 @@ export default function Dashboard() {
                 <section className="chart card pad">
                     <div className="head">
                         <h3>채팅방</h3>
-                        <span className="l">총 {flatRooms.length}개</span>
+                        <span className="l">총 {flatRooms.filter(room => room.type === 'DM').length}개</span>
+                        <button 
+                            onClick={createRoom} 
+                            className="create-room-button"
+                            disabled={loading}
+                            title="Create new room"
+                            style={{
+                                marginLeft: 'auto',
+                                padding: '8px 12px',
+                                backgroundColor: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                            }}
+                        >
+                            {loading ? '⟳' : '+'}
+                        </button>
                     </div>
                     <div className="rooms-list">
-                        {flatRooms.map((room) => (
+                        {flatRooms.filter(room => room.type === 'DM').map((room) => (
                             <div key={room.id} className="room-item" onClick={() => handleRoomClick(room.id)} style={{ cursor: 'pointer' }}>
                                 <div className="room-icon"></div>
                                 <div className="room-info">
@@ -492,7 +583,107 @@ export default function Dashboard() {
                     </div>
                 </section>
             </div>
+
+            {/* Workspace Creation Modal */}
+            {showWorkspaceModal && (
+                <div className="modal-overlay" style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+            }}>
+                <div className="modal-content" style={{
+                    backgroundColor: 'white',
+                    padding: '24px',
+                    borderRadius: '8px',
+                    width: '400px',
+                    maxWidth: '90vw'
+                }}>
+                    <h3 style={{ marginBottom: '20px', color: '#333' }}>새 워크스페이스 생성</h3>
+                    
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                            워크스페이스 이름 *
+                        </label>
+                        <input
+                            type="text"
+                            value={workspaceFormData.name}
+                            onChange={(e) => handleWorkspaceFormChange('name', e.target.value)}
+                            placeholder="워크스페이스 이름을 입력하세요"
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '14px'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                            설명
+                        </label>
+                        <textarea
+                            value={workspaceFormData.description}
+                            onChange={(e) => handleWorkspaceFormChange('description', e.target.value)}
+                            placeholder="워크스페이스 설명을 입력하세요"
+                            rows={3}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                fontSize: '14px',
+                                resize: 'vertical'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => {
+                                setShowWorkspaceModal(false);
+                                setWorkspaceFormData({ name: '', description: '' });
+                            }}
+                            disabled={loading}
+                            style={{
+                                padding: '8px 16px',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                backgroundColor: 'white',
+                                cursor: loading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={createWorkspace}
+                            disabled={loading || !workspaceFormData.name.trim()}
+                            style={{
+                                padding: '8px 16px',
+                                border: 'none',
+                                borderRadius: '4px',
+                                backgroundColor: workspaceFormData.name.trim() ? '#28a745' : '#ccc',
+                                color: 'white',
+                                cursor: (loading || !workspaceFormData.name.trim()) ? 'not-allowed' : 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                            }}
+                        >
+                            {loading ? '생성 중...' : '생성'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            )}
         </div>
     );
 }
-

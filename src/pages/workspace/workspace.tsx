@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import WorkspaceServer from "../../api/workspace/workspace";
+import RoomsService from "../../api/user/rooms/rooms";
 import { WorkspaceDashboardData } from "../../interface/WorkspaceDashboard";
 import './workspace.css';
 
@@ -14,6 +15,7 @@ function Workspace() {
     const [selectedMember, setSelectedMember] = useState<any>(null);
     const [workspaceRooms, setWorkspaceRooms] = useState<any[]>([]);
     const [roomsLoading, setRoomsLoading] = useState(false);
+    const [roomMessages, setRoomMessages] = useState<{[key: string]: string}>({});
 
     useEffect(() => {
         if (workspaceId) {
@@ -38,9 +40,64 @@ function Workspace() {
         try {
             setRoomsLoading(true);
             const roomsRes = await WorkspaceServer.WorkspaceRoomList(Number(workspaceId));
-            setWorkspaceRooms(roomsRes.data || []);
+            const rooms = roomsRes.data || [];
+            setWorkspaceRooms(rooms);
+            
+            // Load last messages for each room
+            const messagePromises = rooms.map(async (room: any) => {
+                if (room.room && room.room[0] && room.room[0].lastMessageId) {
+                    try {
+                        const messageRes = await RoomsService.MessageSelect(room.room[0].id, room.room[0].lastMessageId);
+                        return {
+                            roomId: room.room[0].id,
+                            content: messageRes.data.content || '메시지를 불러올 수 없습니다'
+                        };
+                    } catch (error) {
+                        console.error(`Failed to load message for room ${room.room[0].id}:`, error);
+                        return {
+                            roomId: room.room[0].id,
+                            content: '메시지를 불러올 수 없습니다'
+                        };
+                    }
+                }
+                return null;
+            });
+            
+            const messages = await Promise.all(messagePromises);
+            const messageMap: {[key: string]: string} = {};
+            messages.forEach(msg => {
+                if (msg) {
+                    messageMap[msg.roomId] = msg.content;
+                }
+            });
+            setRoomMessages(messageMap);
         } catch (error) {
             console.error("Workspace rooms fetch error:", error);
+        } finally {
+            setRoomsLoading(false);
+        }
+    };
+
+    const createRoom = async () => {
+        if (!workspaceId) return;
+
+        try {
+            setRoomsLoading(true);
+            const roomName = prompt("채팅방 이름을 입력하세요:");
+            if (!roomName) {
+                setRoomsLoading(false);
+                return;
+            }
+
+            await WorkspaceServer.WorkspaceRoomCreate(Number(workspaceId), {
+                title: roomName,
+                description: ""
+            });
+            await loadWorkspaceRooms();
+            alert("워크스페이스 채팅방 생성 완료");
+        } catch (err) {
+            console.error('Failed to create workspace room:', err);
+            setError('채팅방 생성에 실패했습니다.');
         } finally {
             setRoomsLoading(false);
         }
@@ -261,7 +318,26 @@ function Workspace() {
                 <section className="workspace-rooms-section card pad">
                     <div className="chart-header">
                         <h3>워크스페이스 채팅방</h3>
-                        <span>총 {workspaceRooms.length}개</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span>총 {workspaceRooms.length}개</span>
+                            <button
+                                onClick={createRoom}
+                                disabled={roomsLoading}
+                                style={{
+                                    padding: '6px 12px',
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: roomsLoading ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500'
+                                }}
+                                title="새 채팅방 생성"
+                            >
+                                {roomsLoading ? '⟳' : '+ 채팅방 생성'}
+                            </button>
+                        </div>
                     </div>
                     {roomsLoading ? (
                         <div className="loading">채팅방 목록을 불러오는 중...</div>
@@ -274,11 +350,17 @@ function Workspace() {
                                     onClick={() => navigate(`/workspace/${workspaceId}/room/${room.roomId}`)}
                                 >
                                     <div className="room-info">
-                                        <div className="room-name">{room.title || `Room ${room.roomId}`}</div>
+                                        <div className="room-name">{room.room?.[0]?.title || `Room ${room.roomId}`}</div>
                                         <div className="room-meta">
                                             <span className="room-date">생성일: {formatDate(room.createdAt)}</span>
-                                            {room.lastMessageId && (
-                                                <span className="last-message">마지막 메시지 ID: {room.lastMessageId}</span>
+                                            {room.room?.[0]?.lastMessageId ? (
+                                                <span className="last-message">
+                                                    마지막 메시지: {roomMessages[room.room[0].id] || '로딩 중...'}
+                                                </span>
+                                            ) : (
+                                                <span className="last-message">
+                                                    마지막 메시지: 없음
+                                                </span>
                                             )}
                                         </div>
                                     </div>
@@ -289,6 +371,24 @@ function Workspace() {
                     ) : (
                         <div className="no-rooms">
                             <p>생성된 채팅방이 없습니다.</p>
+                            <button
+                                onClick={createRoom}
+                                disabled={roomsLoading}
+                                style={{
+                                    marginTop: '12px',
+                                    padding: '8px 16px',
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: roomsLoading ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500'
+                                }}
+                                title="새 채팅방 생성"
+                            >
+                                {roomsLoading ? '⟳' : '첫 번째 채팅방 만들기'}
+                            </button>
                         </div>
                     )}
                 </section>

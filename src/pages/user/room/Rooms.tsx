@@ -3,32 +3,9 @@ import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import RoomsService from "../../../api/user/rooms/rooms";
 import ProfileService from "../../../api/user/profile/profile";
 import useSocket from "../../../hooks/useSocket";
+import { Room } from '../../../interface/Room';
+import { Member, MemberWithProfile } from '../../../interface/Member';
 import styles from './Rooms.module.css';
-
-interface Room {
-    id: number;
-    roomId: number;
-    userId: number;
-    lastMessageId: number | null;
-    createdAt: string;
-    lastMessageTime?: string; // 마지막 메시지 시간 추가
-    room?: {
-        title?: string;
-        lastMessageId?: number | null;
-    };
-}
-
-interface Member {
-    id: number;
-    roomId: number;
-    userId: number;
-    lastMessageId: number | null;
-    createdAt: string;
-}
-
-interface MemberWithProfile extends Member {
-    userName?: string;
-}
 
 function Rooms() {
     const navigate = useNavigate();
@@ -192,6 +169,12 @@ function Rooms() {
             
             // Update rooms state with new lastMessageId
             setRooms(prevRooms => {
+                // Check if this message update is already processed
+                const existingRoom = prevRooms.find(room => room.roomId === updatedRoomId);
+                if (existingRoom && existingRoom.lastMessageId === lastMessageId) {
+                    return prevRooms; // Skip if already updated
+                }
+
                 // Update the room with new lastMessageId and lastMessageTime
                 const updatedRooms = prevRooms.map(room => {
                     if (room.roomId === updatedRoomId) {
@@ -220,11 +203,16 @@ function Rooms() {
                 });
             });
 
-            // Update last messages display
-            setLastMessages(prevMessages => ({
-                ...prevMessages,
-                [updatedRoomId]: lastMessage.content
-            }));
+            // Update last messages display only if not already updated
+            setLastMessages(prevMessages => {
+                if (prevMessages[updatedRoomId] === lastMessage.content) {
+                    return prevMessages; // Skip if already updated
+                }
+                return {
+                    ...prevMessages,
+                    [updatedRoomId]: lastMessage.content
+                };
+            });
         });
 
         return unsubscribeRoomUpdated;

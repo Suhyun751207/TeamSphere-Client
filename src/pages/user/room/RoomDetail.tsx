@@ -3,34 +3,9 @@ import { useParams } from 'react-router-dom';
 import RoomsService from "../../../api/user/rooms/rooms";
 import ProfileService from "../../../api/user/Profile";
 import useSocket from "../../../hooks/useSocket";
+import { Message, MessageWithProfile } from '../../../interface/Message';
+import { Member } from '../../../interface/Member';
 import styles from './RoomDetail.module.css';
-
-interface Message {
-    id: number;
-    roomId: number;
-    userId: number;
-    type: string;
-    content: string;
-    imagePath: string | null;
-    isEdited: boolean;
-    isValid: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface MessageWithProfile extends Message {
-    userName?: string;
-}
-
-interface Member {
-    id: number;
-    roomId: number;
-    userId: number;
-    lastMessageId: number | null;
-    createdAt: string;
-    userName?: string;
-    isOnline?: boolean;
-}
 
 
 function RoomDetail() {
@@ -167,21 +142,64 @@ function RoomDetail() {
 
         try {
             if (isConnected) {
-                // Send via Socket.IO for real-time delivery
+                // Send via Socket.IO for real-time delivery (Socket server handles DB creation)
                 sendSocketMessage(parseInt(roomId), messageContent);
                 
-                // For socket messages, we need to create the message in DB to get the ID
-                // and then update the room's last message
-                try {
-                    const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
-                    if (messageRes.data && messageRes.data.insertId) {
-                        // Update room's last message ID
-                        await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
-                        window.dispatchEvent(new CustomEvent('roomUpdated'));
+                // Add optimistic message to local state for immediate feedback
+                const getUserIdFromCookie = (): number => {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if (name === 'userId') {
+                            return parseInt(decodeURIComponent(value)) || 0;
+                        }
                     }
-                } catch (updateErr) {
-                    console.error('Failed to update room lastMessageId after socket message:', updateErr);
-                }
+                    return 0;
+                };
+
+                const optimisticMessage: MessageWithProfile & { isOptimistic?: boolean } = {
+                    id: Date.now(), // Temporary ID
+                    roomId: parseInt(roomId),
+                    userId: getUserIdFromCookie(),
+                    type: 'TEXT',
+                    content: messageContent,
+                    imagePath: null,
+                    isEdited: false,
+                    isValid: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    userName: currentUserName,
+                    isOptimistic: true // Flag to identify optimistic messages
+                };
+                
+                setMessages(prev => [...prev, optimisticMessage]);
+                setTimeout(scrollToBottom, 100);
+                
+                // Set a timeout to check if Socket.IO message was successful
+                const timeoutId = setTimeout(() => {
+                    // Check if the optimistic message is still there (not replaced by real message)
+                    setMessages(currentMessages => {
+                        const stillOptimistic = currentMessages.some(msg => 
+                            (msg as any).isOptimistic && 
+                            msg.content === messageContent &&
+                            msg.userId === getUserIdFromCookie()
+                        );
+                        
+                        if (stillOptimistic) {
+                            console.log('Socket.IO message timeout, removing optimistic message');
+                            // Remove the optimistic message if Socket.IO failed
+                            return currentMessages.filter(msg => 
+                                !(msg as any).isOptimistic || 
+                                msg.content !== messageContent ||
+                                msg.userId !== getUserIdFromCookie()
+                            );
+                        }
+                        return currentMessages;
+                    });
+                }, 5000); // 5 second timeout
+                
+                // Store timeout ID for cleanup
+                (optimisticMessage as any).timeoutId = timeoutId;
             } else {
                 const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
                 if (messageRes.data && messageRes.data.insertId) {
@@ -211,7 +229,21 @@ function RoomDetail() {
                         updatedAt: new Date().toISOString(),
                         userName: currentUserName
                     };
-                    setMessages(prev => [...prev, newMessageObj]);
+                    setMessages(prev => {
+                        // Check if message already exists to avoid duplicates
+                        const exists = prev.some(msg => msg.id === newMessageObj.id);
+                        if (exists) return prev;
+                        
+                        // Additional check for duplicate content and timestamp to prevent race conditions
+                        const duplicateContent = prev.some(msg => 
+                            msg.content === newMessageObj.content && 
+                            msg.userId === newMessageObj.userId &&
+                            Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessageObj.createdAt).getTime()) < 1000
+                        );
+                        if (duplicateContent) return prev;
+                        
+                        return [...prev, newMessageObj];
+                    });
                     try {
                         await RoomsService.RoomLastMessageUpdate(parseInt(roomId), messageRes.data.insertId);
                         window.dispatchEvent(new CustomEvent('roomUpdated'));
@@ -298,6 +330,7 @@ function RoomDetail() {
 
         // Listen for new messages
         const unsubscribeNewMessage = onNewMessage(async (message) => {
+            console.log('Received new message via Socket.IO:', message);
             try {
                 // Get user profile for the message
                 const profileRes = await ProfileService.ProfileUserGet(message.userId);
@@ -311,10 +344,32 @@ function RoomDetail() {
                 };
 
                 setMessages(prev => {
-                    // Check if message already exists to avoid duplicates
-                    const exists = prev.some(msg => msg.id === message.id);
-                    if (exists) return prev;
-                    return [...prev, messageWithProfile];
+                    // Clear timeout for optimistic message if it exists
+                    const optimisticMsg = prev.find(msg => 
+                        (msg as any).isOptimistic && 
+                        msg.content === message.content && 
+                        msg.userId === message.userId
+                    );
+                    if (optimisticMsg && (optimisticMsg as any).timeoutId) {
+                        clearTimeout((optimisticMsg as any).timeoutId);
+                    }
+                    
+                    // Remove optimistic message if it exists (same content and user)
+                    const filteredMessages = prev.filter(msg => 
+                        !(msg as any).isOptimistic || 
+                        msg.content !== message.content || 
+                        msg.userId !== message.userId
+                    );
+                    
+                    // Check if real message already exists to avoid duplicates
+                    const exists = filteredMessages.some(msg => msg.id === message.id);
+                    if (exists) {
+                        console.log('Message already exists, skipping:', message.id);
+                        return filteredMessages;
+                    }
+                    
+                    console.log('Adding new message to state:', message.id);
+                    return [...filteredMessages, messageWithProfile];
                 });
 
                 setTimeout(scrollToBottom, 100);
@@ -329,9 +384,26 @@ function RoomDetail() {
                 };
                 
                 setMessages(prev => {
-                    const exists = prev.some(msg => msg.id === message.id);
-                    if (exists) return prev;
-                    return [...prev, messageWithProfile];
+                    // Clear timeout for optimistic message if it exists
+                    const optimisticMsg = prev.find(msg => 
+                        (msg as any).isOptimistic && 
+                        msg.content === message.content && 
+                        msg.userId === message.userId
+                    );
+                    if (optimisticMsg && (optimisticMsg as any).timeoutId) {
+                        clearTimeout((optimisticMsg as any).timeoutId);
+                    }
+                    
+                    // Remove optimistic message if it exists
+                    const filteredMessages = prev.filter(msg => 
+                        !(msg as any).isOptimistic || 
+                        msg.content !== message.content || 
+                        msg.userId !== message.userId
+                    );
+                    
+                    const exists = filteredMessages.some(msg => msg.id === message.id);
+                    if (exists) return filteredMessages;
+                    return [...filteredMessages, messageWithProfile];
                 });
                 setTimeout(scrollToBottom, 100);
             }
@@ -341,6 +413,9 @@ function RoomDetail() {
         const unsubscribeMessageError = onMessageError((error) => {
             console.error('Socket message error:', error);
             setError(`Message error: ${error.error}`);
+            
+            // Remove failed optimistic messages
+            setMessages(prev => prev.filter(msg => !(msg as any).isOptimistic));
         });
 
         // Helper function to get userId from cookies
