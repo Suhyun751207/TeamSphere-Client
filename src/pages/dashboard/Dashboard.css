@@ -31,7 +31,8 @@
     padding: var(--spacing);
 }
 
-.loading, .error {
+.loading,
+.error {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -289,11 +290,6 @@
     cursor: default;
 }
 
-.attendance-btn.attended:hover {
-    transform: none;
-    background: var(--success-light);
-}
-
 .profile-detail-item {
     display: flex;
     justify-content: space-between;
@@ -456,7 +452,8 @@
     margin-bottom: 32px;
 }
 
-.left-column, .right-column {
+.left-column,
+.right-column {
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -571,7 +568,8 @@
 }
 
 /* Workspace and Room Grids */
-.workspace-grid, .rooms-grid {
+.workspace-grid,
+.rooms-grid {
     padding: 20px;
     display: grid;
     gap: 16px;
@@ -579,7 +577,8 @@
     overflow-y: auto;
 }
 
-.workspace-card, .room-card {
+.workspace-card,
+.room-card {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -591,13 +590,15 @@
     transition: all 0.2s ease;
 }
 
-.workspace-card:hover, .room-card:hover {
+.workspace-card:hover,
+.room-card:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow);
     border-color: var(--primary);
 }
 
-.workspace-card-icon, .room-card-icon {
+.workspace-card-icon,
+.room-card-icon {
     width: 48px;
     height: 48px;
     border-radius: var(--radius);
@@ -609,12 +610,14 @@
     background: linear-gradient(135deg, var(--primary-light), #e0e7ff);
 }
 
-.workspace-card-content, .room-card-content {
+.workspace-card-content,
+.room-card-content {
     flex: 1;
     min-width: 0;
 }
 
-.workspace-card-name, .room-card-title {
+.workspace-card-name,
+.room-card-title {
     font-size: 16px;
     font-weight: 600;
     color: var(--text);
@@ -624,7 +627,8 @@
     text-overflow: ellipsis;
 }
 
-.workspace-card-desc, .room-card-type {
+.workspace-card-desc,
+.room-card-type {
     font-size: 13px;
     color: var(--text-secondary);
     margin-bottom: 4px;
@@ -633,7 +637,8 @@
     text-overflow: ellipsis;
 }
 
-.workspace-card-date, .room-card-message {
+.workspace-card-date,
+.room-card-message {
     font-size: 12px;
     color: var(--text-muted);
     white-space: nowrap;
@@ -1059,16 +1064,16 @@
     .main-content {
         grid-template-columns: 1fr;
     }
-    
+
     .summary-cards {
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
-    
+
     .summary-cards-div {
         flex-direction: column;
         gap: 16px;
     }
-    
+
     .profile-card-full {
         grid-column: 1 / -1;
     }
@@ -1078,120 +1083,121 @@
     .dashboard {
         padding: 16px;
     }
-    
+
     .title {
         font-size: 24px;
     }
-    
+
     .summary-cards {
         grid-template-columns: 1fr;
         gap: 16px;
     }
-    
+
     .profile-card-full {
         padding: 20px;
     }
-    
+
     .profile-card-header {
         flex-direction: column;
         align-items: center;
         text-align: center;
         gap: 12px;
     }
-    
+
     .profile-card-avatar {
         width: 64px;
         height: 64px;
     }
-    
+
     .profile-avatar-placeholder {
         font-size: 20px;
     }
-    
+
     .profile-card-name {
         font-size: 18px;
     }
-    
+
     .profile-card-content {
         flex-direction: column;
         gap: 16px;
     }
-    
+
     .profile-card-details {
         min-width: 100%;
     }
-    
+
     .profile-card-actions {
         min-width: 100%;
         flex-direction: row;
         gap: 8px;
     }
-    
+
     .profile-action-btn {
         flex: 1;
         font-size: 13px;
         padding: 10px 12px;
     }
-    
+
     .profile-detail-row {
         flex-direction: column;
         gap: 12px;
     }
-    
+
     .summary-card {
         padding: 20px;
     }
-    
+
     .summary-card-icon {
         width: 48px;
         height: 48px;
         font-size: 20px;
     }
-    
+
     .summary-card-value {
         font-size: 24px;
     }
-    
+
     .content-card-header {
         padding: 16px 20px;
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
     }
-    
+
     .content-card-actions {
         width: 100%;
         justify-content: space-between;
     }
-    
-    .workspace-grid, .rooms-grid {
+
+    .workspace-grid,
+    .rooms-grid {
         padding: 16px;
     }
-    
+
     .tab-content {
         padding: 16px;
     }
-    
+
     .activity-controls {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
     }
-    
+
     .search-box {
         max-width: none;
     }
-    
+
     .attendance-header-new {
         flex-direction: column;
         align-items: flex-start;
         gap: 16px;
     }
-    
+
     .heatmap-grid {
         gap: 4px;
     }
-    
+
     .day-circle {
         width: 24px;
         height: 24px;
@@ -1204,23 +1210,25 @@
         align-items: flex-start;
         gap: 12px;
     }
-    
+
     .summary-card-icon {
         width: 40px;
         height: 40px;
         font-size: 18px;
     }
-    
+
     .summary-card-value {
         font-size: 20px;
     }
-    
-    .workspace-card, .room-card {
+
+    .workspace-card,
+    .room-card {
         padding: 12px;
         gap: 12px;
     }
-    
-    .workspace-card-icon, .room-card-icon {
+
+    .workspace-card-icon,
+    .room-card-icon {
         width: 40px;
         height: 40px;
         font-size: 16px;
@@ -1705,7 +1713,7 @@
 
 .month-contribution-grid {
     display: grid;
-    grid-template-areas: 
+    grid-template-areas:
         "weekdays days";
     grid-template-columns: auto 1fr;
     gap: 12px;
@@ -2034,15 +2042,15 @@
     .grid {
         grid-template-columns: repeat(8, 1fr);
     }
-    
+
     .summary {
         grid-column: span 8;
     }
-    
+
     .chart {
         grid-column: span 4;
     }
-    
+
     .dashboard-table-card {
         grid-column: span 8;
     }
@@ -2052,15 +2060,15 @@
     .grid {
         grid-template-columns: repeat(6, 1fr);
     }
-    
+
     .summary {
         grid-column: span 6;
     }
-    
+
     .chart {
         grid-column: span 6;
     }
-    
+
     .dashboard-table-card {
         grid-column: span 6;
     }
@@ -2070,21 +2078,21 @@
     .dashboard {
         padding: 16px;
     }
-    
+
     .grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .summary,
     .chart,
     .dashboard-table-card {
         grid-column: span 2;
     }
-    
+
     .summary .row {
         flex-direction: column;
     }
-    
+
     .sum-item {
         margin-bottom: 8px;
     }
