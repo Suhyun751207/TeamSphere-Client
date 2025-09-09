@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import RoomsService from "../../../api/user/rooms/rooms";
 import ProfileService from "../../../api/user/Profile";
+import WorkspaceServer from "../../../api/workspace/workspace";
 import useSocket from "../../../hooks/useSocket";
 import { Message, MessageWithProfile } from '../../../interface/Message';
 import { Member } from '../../../interface/Member';
@@ -30,7 +31,6 @@ function RoomDetail() {
     // Initialize Socket.IO connection
     const {
         isConnected,
-        connectionError,
         joinRoom,
         leaveRoom,
         sendMessage: sendSocketMessage,
@@ -45,11 +45,11 @@ function RoomDetail() {
 
     const loadMembers = useCallback(async () => {
         if (!roomId) return;
-        
+
         try {
             const membersRes = await RoomsService.RoomMembersSelect(parseInt(roomId));
             const membersArray = Array.isArray(membersRes.data) ? membersRes.data : [];
-            
+
             // Fetch user names for members (server already provides isOnline status)
             const membersWithNames = await Promise.all(
                 membersArray.map(async (member: Member) => {
@@ -67,7 +67,7 @@ function RoomDetail() {
                     }
                 })
             );
-            
+
             setMembers(membersWithNames);
         } catch (err) {
             console.error('Failed to load members:', err);
@@ -76,14 +76,14 @@ function RoomDetail() {
 
     const loadRoomData = useCallback(async () => {
         if (!roomId) return;
-        
+
         try {
             setLoading(true);
             const res = await RoomsService.RoomMessageSelect(parseInt(roomId));
-            
+
             if (res.data.messages) {
                 const messagesArray = res.data.messages;
-                
+
                 const messagesWithProfiles = await Promise.all(
                     messagesArray.map(async (message: Message) => {
                         try {
@@ -96,7 +96,7 @@ function RoomDetail() {
                         }
                     })
                 );
-                
+
                 setMessages(messagesWithProfiles);
             } else {
                 const messagesArray = Array.isArray(res.data) ? res.data : [];
@@ -131,9 +131,9 @@ function RoomDetail() {
         e.preventDefault();
         if (!roomId || !newMessage.trim() || sending) return;
         const messageContent = newMessage.trim();
-        setNewMessage(''); 
+        setNewMessage('');
         setSending(true);
-        
+
         // Stop typing indicator
         if (isTyping) {
             stopTyping(parseInt(roomId));
@@ -143,68 +143,40 @@ function RoomDetail() {
         try {
             if (isConnected) {
                 sendSocketMessage(parseInt(roomId), messageContent);
-                
+
                 let userName = currentUserName;
                 let currentUserId = getUserIdFromCookie();
-                
-                if (!userName || currentUserId === 0) {
-                    try {
-                        // If getUserIdFromCookie returns 0, try to get from ProfileAllGet like fetchCurrentUser does
-                        if (currentUserId === 0) {
-                            const profileAllRes = await ProfileService.ProfileAllGet();
-                            // Extract userId from ProfileAllGet response if available
-                            currentUserId = profileAllRes.data.user?.id || profileAllRes.data.profile?.userId || 0;
-                        }
-                        const profileRes = await ProfileService.getMe();
-                        userName = profileRes.data.profile.name;
-                    } catch (err) {
-                        console.error('Failed to get user info:', err);
-                        userName = currentUserId > 0 ? `User ${currentUserId}` : 'Unknown User';
-                    }
-                }
-                
+
+                const profileAllRes = await ProfileService.ProfileAllGet();
+                // Extract userId from ProfileAllGet response if available
+                currentUserId = profileAllRes.data.user?.id || profileAllRes.data.profile?.userId || 0;
+
+                const profileRes = await ProfileService.getMe();
+                userName = profileRes.data.profile.name;
+
                 // Add optimistic message to UI immediately
                 const optimisticMessage: MessageWithProfile & { isOptimistic?: boolean } = {
                     id: Date.now(), // Temporary ID
                     roomId: parseInt(roomId),
                     userId: currentUserId, // Use the corrected userId
-                    type: 'TEXT',
                     content: messageContent,
-                    imagePath: null,
-                    isEdited: false,
-                    isValid: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                     userName: userName,
+                    isEdited: false, // Required field from MessageWithProfile
                     isOptimistic: true // Flag to identify optimistic messages
                 };
-                
+
                 setMessages(prev => [...prev, optimisticMessage]);
                 setTimeout(scrollToBottom, 100);
-                
-                // Set a timeout to check if Socket.IO message was successful
+
+                // Store timeout ID for cleanup - but don't auto-remove the message
+                // Only remove if we get an explicit error or the real message arrives
                 const timeoutId = setTimeout(() => {
-                    // Check if the optimistic message is still there (not replaced by real message)
-                    setMessages(currentMessages => {
-                        const stillOptimistic = currentMessages.some(msg => 
-                            (msg as any).isOptimistic && 
-                            msg.content === messageContent &&
-                            msg.userId === getUserIdFromCookie()
-                        );
-                        
-                        if (stillOptimistic) {
-                            console.log('Socket.IO message timeout, removing optimistic message');
-                            // Remove the optimistic message if Socket.IO failed
-                            return currentMessages.filter(msg => 
-                                !(msg as any).isOptimistic || 
-                                msg.content !== messageContent ||
-                                msg.userId !== getUserIdFromCookie()
-                            );
-                        }
-                        return currentMessages;
-                    });
-                }, 5000); // 5 second timeout
-                
+                    // Don't automatically remove the message - let it stay visible
+                    console.log('Socket.IO message timeout, but keeping optimistic message visible');
+                }, 5000);
+
                 // Store timeout ID for cleanup
                 (optimisticMessage as any).timeoutId = timeoutId;
             } else {
@@ -317,12 +289,11 @@ function RoomDetail() {
 
         // Listen for new messages
         const unsubscribeNewMessage = onNewMessage(async (message) => {
-            console.log('Received new message via Socket.IO:', message);
             try {
                 // Get user profile for the message
                 const profileRes = await ProfileService.ProfileUserGet(message.userId);
                 const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
-                
+
                 const messageWithProfile: MessageWithProfile = {
                     ...message,
                     createdAt: new Date(message.createdAt).toISOString(),
@@ -332,32 +303,42 @@ function RoomDetail() {
 
                 setMessages(prev => {
                     // Clear timeout for optimistic message if it exists
-                    const optimisticMsg = prev.find(msg => 
-                        (msg as any).isOptimistic && 
-                        msg.content === message.content && 
+                    const optimisticMsg = prev.find(msg =>
+                        (msg as any).isOptimistic &&
+                        msg.content === message.content &&
                         msg.userId === message.userId
                     );
                     if (optimisticMsg && (optimisticMsg as any).timeoutId) {
                         clearTimeout((optimisticMsg as any).timeoutId);
                     }
-                    
+
                     // Remove optimistic message if it exists (same content and user)
-                    const filteredMessages = prev.filter(msg => 
-                        !(msg as any).isOptimistic || 
-                        msg.content !== message.content || 
+                    const filteredMessages = prev.filter(msg =>
+                        !(msg as any).isOptimistic ||
+                        msg.content !== message.content ||
                         msg.userId !== message.userId
                     );
-                    
+
                     // Check if real message already exists to avoid duplicates
                     const exists = filteredMessages.some(msg => msg.id === message.id);
                     if (exists) {
                         console.log('Message already exists, skipping:', message.id);
                         return filteredMessages;
                     }
-                    
+
                     console.log('Adding new message to state:', message.id);
                     return [...filteredMessages, messageWithProfile];
                 });
+
+                // Update workspace room last message (if this is a workspace room)
+                try {
+                    // Try to update workspace room last message - this might fail if it's not a workspace room
+                    // We'll need to determine the workspace ID somehow, for now we'll skip this
+                    await RoomsService.RoomLastMessageUpdate(parseInt(roomId), message.id);
+                } catch (err) {
+                    // Ignore errors - this might not be a workspace room
+                    console.log('Not a workspace room or failed to update workspace room last message');
+                }
 
                 setTimeout(scrollToBottom, 100);
                 window.dispatchEvent(new CustomEvent('roomUpdated'));
@@ -369,25 +350,25 @@ function RoomDetail() {
                     updatedAt: new Date(message.updatedAt).toISOString(),
                     userName: `User ${message.userId}`
                 };
-                
+
                 setMessages(prev => {
                     // Clear timeout for optimistic message if it exists
-                    const optimisticMsg = prev.find(msg => 
-                        (msg as any).isOptimistic && 
-                        msg.content === message.content && 
+                    const optimisticMsg = prev.find(msg =>
+                        (msg as any).isOptimistic &&
+                        msg.content === message.content &&
                         msg.userId === message.userId
                     );
                     if (optimisticMsg && (optimisticMsg as any).timeoutId) {
                         clearTimeout((optimisticMsg as any).timeoutId);
                     }
-                    
+
                     // Remove optimistic message if it exists
-                    const filteredMessages = prev.filter(msg => 
-                        !(msg as any).isOptimistic || 
-                        msg.content !== message.content || 
+                    const filteredMessages = prev.filter(msg =>
+                        !(msg as any).isOptimistic ||
+                        msg.content !== message.content ||
                         msg.userId !== message.userId
                     );
-                    
+
                     const exists = filteredMessages.some(msg => msg.id === message.id);
                     if (exists) return filteredMessages;
                     return [...filteredMessages, messageWithProfile];
@@ -400,7 +381,7 @@ function RoomDetail() {
         const unsubscribeMessageError = onMessageError((error) => {
             console.error('Socket message error:', error);
             setError(`Message error: ${error.error}`);
-            
+
             // Remove failed optimistic messages
             setMessages(prev => prev.filter(msg => !(msg as any).isOptimistic));
         });
@@ -439,12 +420,12 @@ function RoomDetail() {
                         // Fetch user name asynchronously
                         ProfileService.ProfileUserGet(data.userId)
                             .then(response => {
-                                setTypingUserNames(prevNames => 
+                                setTypingUserNames(prevNames =>
                                     new Map(prevNames).set(data.userId, response.data.profile.name || `User ${data.userId}`)
                                 );
                             })
                             .catch(() => {
-                                setTypingUserNames(prevNames => 
+                                setTypingUserNames(prevNames =>
                                     new Map(prevNames).set(data.userId, `User ${data.userId}`)
                                 );
                             });
@@ -529,15 +510,15 @@ function RoomDetail() {
                             <span className={styles.disconnected}>🔴 Offline</span>
                         )}
                     </div>
-                    <button 
+                    <button
                         onClick={() => setShowMembersList(!showMembersList)}
                         className={styles.membersButton}
                         title="Show members"
                     >
                         👥 ({members.length})
                     </button>
-                    <button 
-                        onClick={loadRoomData} 
+                    <button
+                        onClick={loadRoomData}
                         className={styles.refreshButton}
                         disabled={loading}
                     >
@@ -579,11 +560,11 @@ function RoomDetail() {
                         <div ref={messagesEndRef} />
                     </div>
                 )}
-                
+
                 {/* Typing indicators */}
                 {typingUsers.size > 0 && (
                     <div className={styles.typingIndicator}>
-                        {Array.from(typingUsers).length === 1 
+                        {Array.from(typingUsers).length === 1
                             ? `${typingUserNames.get(Array.from(typingUsers)[0]) || `User ${Array.from(typingUsers)[0]}`} is typing...`
                             : `${Array.from(typingUsers).length} users are typing...`
                         }
@@ -596,7 +577,7 @@ function RoomDetail() {
                 <div className={styles.membersSidebar}>
                     <div className={styles.membersHeader}>
                         <h3>Members ({members.length})</h3>
-                        <button 
+                        <button
                             onClick={() => setShowMembersList(false)}
                             className={styles.closeSidebar}
                         >
@@ -633,8 +614,8 @@ function RoomDetail() {
                         className={styles.messageInput}
                         disabled={sending}
                     />
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         className={styles.sendButton}
                         disabled={sending || !newMessage.trim()}
                     >
@@ -648,7 +629,7 @@ function RoomDetail() {
                     <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
                             <h3>방으로 초대하기</h3>
-                            <button 
+                            <button
                                 onClick={() => setShowInviteModal(false)}
                                 className={styles.closeButton}
                             >
@@ -666,7 +647,7 @@ function RoomDetail() {
                                 required
                             />
                             <div className={styles.modalButtons}>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={() => setShowInviteModal(false)}
                                     className={styles.cancelButton}
@@ -674,8 +655,8 @@ function RoomDetail() {
                                 >
                                     취소
                                 </button>
-                                <button 
-                                    type="submit" 
+                                <button
+                                    type="submit"
                                     className={styles.inviteSubmitButton}
                                     disabled={inviting || !inviteUserId.trim()}
                                 >

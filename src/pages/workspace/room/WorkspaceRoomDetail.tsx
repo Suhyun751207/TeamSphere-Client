@@ -26,7 +26,6 @@ function WorkspaceRoomDetail() {
     // Initialize Socket.IO connection
     const {
         isConnected,
-        connectionError,
         joinRoom,
         leaveRoom,
         sendMessage: sendSocketMessage,
@@ -144,7 +143,6 @@ function WorkspaceRoomDetail() {
                         );
                         
                         if (stillOptimistic) {
-                            console.log('Socket.IO message timeout, removing optimistic message');
                             // Remove the optimistic message if Socket.IO failed
                             return currentMessages.filter(msg => 
                                 !(msg as any).isOptimistic || 
@@ -256,14 +254,10 @@ function WorkspaceRoomDetail() {
     // Socket.IO event listeners
     useEffect(() => {
         if (!roomId || !isConnected) return;
-
-        console.log('Joining room:', roomId);
-        // Join the room when component mounts or roomId changes
         joinRoom(parseInt(roomId));
 
         // Listen for new messages
         const unsubscribeNewMessage = onNewMessage(async (message) => {
-            console.log('Received new message via Socket.IO:', message);
             try {
                 // Get user profile for the message
                 const profileRes = await ProfileService.getProfile(message.userId);
@@ -299,10 +293,8 @@ function WorkspaceRoomDetail() {
                     // Check if real message already exists to avoid duplicates
                     const exists = filteredMessages.some(msg => msg.id === message.id);
                     if (exists) {
-                        console.log('Message already exists, skipping:', message.id);
                         return filteredMessages;
                     }
-                    console.log('Adding new message to state:', message.id);
                     return [...filteredMessages, messageWithProfile];
                 });
 
@@ -420,7 +412,6 @@ function WorkspaceRoomDetail() {
 
         // Cleanup function
         return () => {
-            console.log('Leaving room:', roomId);
             if (roomId) {
                 leaveRoom(parseInt(roomId));
             }
@@ -430,7 +421,7 @@ function WorkspaceRoomDetail() {
             unsubscribeUserOnline();
             unsubscribeUserOffline();
         };
-    }, [roomId, isConnected]);
+    }, [roomId, isConnected, joinRoom, leaveRoom, loadMembers, onNewMessage, onMessageError, onUserTyping, onUserOnline, onUserOffline]);
 
     // Load members when room changes or online users change
     useEffect(() => {

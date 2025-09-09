@@ -44,3 +44,8 @@ export interface MessageCreateRequest {
 export interface MessageUpdateRequest {
     content: string;
 }
+
+export interface WorkspaceMemberCreateRequest {
+    userId: number;
+    role: "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
+}

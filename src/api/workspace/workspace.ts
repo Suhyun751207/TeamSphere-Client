@@ -1,5 +1,5 @@
 import api from "../Api";
-import { WorkspaceCreateRequest, RoomCreateRequest, MessageCreateRequest, MessageUpdateRequest } from "../../interface/Workspace";
+import { WorkspaceCreateRequest, RoomCreateRequest, MessageCreateRequest, MessageUpdateRequest, WorkspaceMemberCreateRequest } from "../../interface/Workspace";
 
 // 워크스페이스 목록 조회
 async function WorkspaceList(workspaceId: number) {
@@ -56,6 +56,11 @@ async function WorkspaceRoomMemberAdd(workspaceId: number, roomId: number, userI
     return await api.post(`/workspace/${workspaceId}/message/${roomId}/${userId}/add`);
 }
 
+// 워크스페이스 멤버 추가
+async function WorkspaceMemberAdd(workspaceId: number, data: WorkspaceMemberCreateRequest) {
+    return await api.post(`/workspace/${workspaceId}/members`, data);
+}
+
 const WorkspaceServer = {
     WorkspaceList,
     WorkspaceCreate,
@@ -67,7 +72,8 @@ const WorkspaceServer = {
     WorkspaceMessageList,
     WorkspaceMessageCreate,
     WorkspaceRoomLastMessageUpdate,
-    WorkspaceRoomMemberAdd
+    WorkspaceRoomMemberAdd,
+    WorkspaceMemberAdd
 };
 
 export default WorkspaceServer;

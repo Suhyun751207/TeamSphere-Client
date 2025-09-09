@@ -339,6 +339,7 @@
     font-size: 1rem;
     margin-bottom: 1rem;
     transition: all 0.2s ease;
+    color:#000;
 }
 
 .inviteInput:focus {

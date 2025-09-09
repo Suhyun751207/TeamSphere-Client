@@ -39,7 +39,8 @@ function Rooms() {
             const messagesMap: {[key: number]: string} = {};
             const roomsWithMessageTimes = await Promise.all(
                 res.data.map(async (room: Room) => {
-                    const messageId = room.room?.lastMessageId || room.lastMessageId;
+                    const roomData = Array.isArray(room.room) ? room.room[0] : room.room;
+                    const messageId = roomData?.lastMessageId || room.lastMessageId;
                     if (messageId) {
                         try {
                             const messageRes = await RoomsService.MessageSelect(room.roomId, messageId);
