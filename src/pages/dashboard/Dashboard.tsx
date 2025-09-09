@@ -12,7 +12,9 @@ export default function Dashboard() {
     const navigate = useNavigate();
     const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [attendanceStatus, setAttendanceStatus] = useState<boolean | null>(null);
     const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
+    const [attendanceRecordsState, setAttendanceRecordsState] = useState<any[]>([]);
     const [workspaceNames, setWorkspaceNames] = useState<{ [key: number]: string }>({});
     const [lastMessages, setLastMessages] = useState<{ [key: number]: string }>({});
     const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
@@ -36,7 +38,51 @@ export default function Dashboard() {
             console.error("Dashboard data fetch error:", error);
             setLoading(false);
         });
+
+        // Check attendance status
+        checkAttendanceStatus();
     }, []);
+
+    const checkAttendanceStatus = async () => {
+        try {
+            const response = await AttendanceService.AttendanceGet();
+            setAttendanceRecordsState(response.data);
+            
+            // Check if user has attended today
+            const today = new Date().toDateString();
+            const hasAttendedToday = response.data.some((record: any) => 
+                new Date(record.createdAt).toDateString() === today
+            );
+            setAttendanceStatus(hasAttendedToday);
+        } catch (error) {
+            console.error("Failed to check attendance status:", error);
+            setAttendanceStatus(false);
+            setAttendanceRecordsState([]);
+        }
+    };
+
+    const handleAttendance = async () => {
+        if (attendanceStatus) return; // Already attended today
+        
+        setIsAttendanceLoading(true);
+        try {
+            await AttendanceService.AttendanceCreate();
+            setAttendanceStatus(true);
+            
+            // Update attendance records to reflect the new attendance
+            const today = new Date();
+            const newAttendanceRecord = {
+                id: Date.now(), // Temporary ID
+                createdAt: today.toISOString(),
+                userId: dashboardData?.user?.id
+            };
+            setAttendanceRecordsState(prevRecords => [...prevRecords, newAttendanceRecord]);
+        } catch (error) {
+            console.error("Failed to create attendance:", error);
+        } finally {
+            setIsAttendanceLoading(false);
+        }
+    };
 
     // 워크스페이스 이름 가져오기
     useEffect(() => {
@@ -222,7 +268,7 @@ export default function Dashboard() {
         const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         const currentDay = today.getDate();
 
-        const monthlyAttendance = attendanceRecords.filter(record => {
+        const monthlyAttendance = attendanceRecordsState.filter(record => {
             const recordDate = new Date(record.createdAt);
             return recordDate >= startOfMonth && recordDate <= today;
         });
@@ -237,7 +283,7 @@ export default function Dashboard() {
     // Attendance calendar functions
     const isAlreadyAttended = () => {
         const today = new Date().toDateString();
-        return attendanceRecords.some(record =>
+        return attendanceRecordsState.some(record =>
             new Date(record.createdAt).toDateString() === today
         );
     };
@@ -263,7 +309,7 @@ export default function Dashboard() {
         const today = new Date();
         const todayStr = today.toDateString();
         const attendedDates = new Set(
-            attendanceRecords.map(record => new Date(record.createdAt).toDateString())
+            attendanceRecordsState.map(record => new Date(record.createdAt).toDateString())
         );
 
         const months: MonthData[] = [];
@@ -381,28 +427,51 @@ export default function Dashboard() {
                             )}
                         </div>
                     </div>
-                    <div className="profile-card-details">
-                        <div className="profile-detail-row">
-                            <div className="profile-detail-item">
-                                <span className="profile-detail-label">User ID</span>
-                                <span className="profile-detail-value">#{user.id}</span>
+                    <div className="profile-card-content">
+                        <div className="profile-card-details">
+                            <div className="profile-detail-row">
+                                <div className="profile-detail-item">
+                                    <span className="profile-detail-label">User ID</span>
+                                    <span className="profile-detail-value">#{user.id}</span>
+                                </div>
+                                <div className="profile-detail-item">
+                                    <span className="profile-detail-label">Age</span>
+                                    <span className="profile-detail-value">{profile.age}세</span>
+                                </div>
                             </div>
-                            <div className="profile-detail-item">
-                                <span className="profile-detail-label">Age</span>
-                                <span className="profile-detail-value">{profile.age}세</span>
+                            <div className="profile-detail-row">
+                                <div className="profile-detail-item">
+                                    <span className="profile-detail-label">Gender</span>
+                                    <span className="profile-detail-value">
+                                        {profile.gender === 'PRIVATE' ? '비공개' : profile.gender}
+                                    </span>
+                                </div>
+                                <div className="profile-detail-item">
+                                    <span className="profile-detail-label">Join Date</span>
+                                    <span className="profile-detail-value">{formatDate(user.createdAt)}</span>
+                                </div>
                             </div>
                         </div>
-                        <div className="profile-detail-row">
-                            <div className="profile-detail-item">
-                                <span className="profile-detail-label">Gender</span>
-                                <span className="profile-detail-value">
-                                    {profile.gender === 'PRIVATE' ? '비공개' : profile.gender}
-                                </span>
-                            </div>
-                            <div className="profile-detail-item">
-                                <span className="profile-detail-label">Join Date</span>
-                                <span className="profile-detail-value">{formatDate(user.createdAt)}</span>
-                            </div>
+                        <div className="profile-card-actions">
+                            <button 
+                                className="profile-action-btn settings-btn"
+                                onClick={() => navigate('/profile')}
+                            >
+                                ⚙️ 프로필 설정
+                            </button>
+                            <button 
+                                className={`profile-action-btn attendance-btn ${attendanceStatus ? 'attended' : ''}`}
+                                onClick={handleAttendance}
+                                disabled={isAttendanceLoading || (attendanceStatus === true)}
+                            >
+                                {isAttendanceLoading ? (
+                                    '처리 중...'
+                                ) : attendanceStatus ? (
+                                    '✅ 출석 완료'
+                                ) : (
+                                    '📝 출석하기'
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -610,7 +679,7 @@ export default function Dashboard() {
                                 <div className="attendance-header-new">
                                     <div className="attendance-stats-new">
                                         <div className="stat-item-new">
-                                            <span className="stat-value-new">{attendanceRecords.length}</span>
+                                            <span className="stat-value-new">{attendanceRecordsState.length}</span>
                                             <span className="stat-label-new">총 출석일</span>
                                         </div>
                                         <div className="stat-item-new">
@@ -646,7 +715,7 @@ export default function Dashboard() {
                                             const date = new Date();
                                             date.setDate(date.getDate() - (6 - i));
                                             const dateStr = date.toDateString();
-                                            const attended = attendanceRecords.some(record =>
+                                            const attended = attendanceRecordsState.some(record =>
                                                 new Date(record.createdAt).toDateString() === dateStr
                                             );
                                             return (
@@ -667,7 +736,7 @@ export default function Dashboard() {
                                 <div className="attendance-records">
                                     <h4>최근 출석 기록</h4>
                                     <div className="records-list">
-                                        {attendanceRecords
+                                        {attendanceRecordsState
                                             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                             .slice(0, 5)
                                             .map((record) => (

@@ -206,9 +206,16 @@
     color: var(--warning);
 }
 
-.profile-card-details {
+.profile-card-content {
+    display: flex;
+    gap: 20px;
     padding: 20px;
     background: white;
+}
+
+.profile-card-details {
+    flex: 1;
+    min-width: 50%;
 }
 
 .profile-detail-row {
@@ -220,6 +227,71 @@
 
 .profile-detail-row:last-child {
     margin-bottom: 0;
+}
+
+/* Profile Actions Section */
+.profile-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 200px;
+    align-items: stretch;
+}
+
+.profile-action-btn {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.profile-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.settings-btn {
+    background: var(--primary);
+    color: white;
+}
+
+.settings-btn:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.attendance-btn {
+    background: var(--success);
+    color: white;
+}
+
+.attendance-btn:hover:not(:disabled) {
+    background: #059669;
+}
+
+.attendance-btn.attended {
+    background: var(--success-light);
+    color: var(--success);
+    cursor: default;
+}
+
+.attendance-btn.attended:hover {
+    transform: none;
+    background: var(--success-light);
 }
 
 .profile-detail-item {
@@ -1038,6 +1110,27 @@
     
     .profile-card-name {
         font-size: 18px;
+    }
+    
+    .profile-card-content {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .profile-card-details {
+        min-width: 100%;
+    }
+    
+    .profile-card-actions {
+        min-width: 100%;
+        flex-direction: row;
+        gap: 8px;
+    }
+    
+    .profile-action-btn {
+        flex: 1;
+        font-size: 13px;
+        padding: 10px 12px;
     }
     
     .profile-detail-row {
