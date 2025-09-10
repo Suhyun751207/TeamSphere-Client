@@ -292,7 +292,6 @@
 
 .attendance-btn.attended:hover {
     transform: none;
-    background: var(--success-light);
 }
 
 /* GitHub-style Monthly Attendance Calendar */

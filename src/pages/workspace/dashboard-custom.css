@@ -1,0 +1,794 @@
+/* TeamSphere Dashboard CSS - 자연스럽고 실용적인 워크스페이스 대시보드 */
+
+:root {
+  /* Natural Color Palette */
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  
+  /* Clean Backgrounds */
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
+  --bg-accent: #f0f9ff;
+  
+  /* Readable Text */
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  
+  /* Simple Borders */
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  
+  /* Natural Shadows */
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  
+  /* Comfortable Radius */
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+/* 워크스페이스 대시보드 컨테이너 */
+.workspace-dashboard {
+  min-height: 100vh;
+  padding: 24px;
+  margin: 0 auto;
+}
+
+/* 상단 바 */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.back-button:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* 그리드 레이아웃 */
+.grid-workspace {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+/* 카드 기본 스타일 - 글래스모피즘 */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card.pad {
+  padding: 24px;
+}
+
+/* 워크스페이스 헤더 */
+.workspace-header {
+  grid-column: span 12;
+  background: var(--text-primary);
+  color: white;
+  padding: 32px;
+}
+
+.workspace-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.workspace-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 600;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.workspace-details h1 {
+  margin: 0 0 8px 0;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.workspace-details p {
+  margin: 0 0 16px 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.workspace-meta {
+  display: flex;
+  gap: 24px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* 출석 차트 섹션 */
+.attendance-chart {
+  grid-column: span 8;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.chart-header span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.attendance-summary {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.pie-chart-container {
+  position: relative;
+}
+
+.pie-chart {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: conic-gradient(var(--success) var(--attended-angle, 360deg), var(--border-light) 0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pie-chart::before {
+  content: '';
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background: var(--bg-card);
+  border-radius: 50%;
+}
+
+.pie-chart-text {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.pie-chart-percentage {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pie-chart-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.attendance-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.legend-color.attended {
+  background: var(--success);
+}
+
+.legend-color.not-attended {
+  background: var(--border-light);
+}
+
+.weekly-attendance-chart h4 {
+  margin: 0 0 16px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+/* 멤버 섹션 */
+.members-section {
+  grid-column: span 4;
+}
+
+.add-member-btn {
+  margin-left: auto;
+  padding: 8px 12px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.add-member-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-hover);
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+}
+
+.member-item:hover {
+  background: var(--bg-accent);
+}
+
+.member-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.member-info {
+  flex: 1;
+}
+
+.member-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.member-role {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.attendance-status {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.attendance-status.attended {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* 통계 섹션 */
+.stats-section {
+  grid-column: span 6;
+}
+
+.stats-section h3 {
+  margin: 0 0 24px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 24px 16px;
+  background: var(--bg-hover);
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+}
+
+.stat-card:hover {
+  background: var(--bg-accent);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* 채팅방 섹션 */
+.workspace-rooms-section {
+  grid-column: span 6;
+}
+
+.rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--bg-hover);
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.room-item:hover {
+  background: var(--bg-accent);
+}
+
+.room-info {
+  flex: 1;
+}
+
+.room-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.room-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.room-date, .last-message {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.room-arrow {
+  color: var(--text-light);
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.room-item:hover .room-arrow {
+  color: var(--primary-blue);
+  transform: translateX(4px);
+}
+
+/* 팀 섹션 */
+.teams-section {
+  grid-column: span 6;
+}
+
+.teams-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.team-card {
+  padding: 20px;
+  background: var(--bg-hover);
+  border-radius: var(--radius);
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.team-card:hover {
+  background: var(--bg-accent);
+}
+
+.team-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.team-manager {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.team-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.team-stats span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  background: white;
+  border-radius: var(--radius-sm);
+}
+
+/* 팀 멤버 섹션 */
+.team-members-section {
+  grid-column: span 6;
+}
+
+.no-selection {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1200px) {
+  .grid-workspace {
+    grid-template-columns: repeat(8, 1fr);
+  }
+  
+  .attendance-chart {
+    grid-column: span 8;
+  }
+  
+  .members-section {
+    grid-column: span 8;
+  }
+  
+  .stats-section,
+  .workspace-rooms-section,
+  .teams-section,
+  .team-members-section {
+    grid-column: span 4;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-dashboard {
+    padding: 16px;
+  }
+  
+  .grid-workspace {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .workspace-header,
+  .attendance-chart,
+  .members-section,
+  .stats-section,
+  .workspace-rooms-section,
+  .teams-section,
+  .team-members-section {
+    grid-column: span 1;
+  }
+  
+  .attendance-summary {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .workspace-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .workspace-details h1 {
+    font-size: 2rem;
+  }
+}
+
+
+
+/* Teams section */
+.teams-section {
+  grid-column: span 6;
+}
+
+.teams-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.team-card {
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--ring);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.team-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.team-card.selected {
+  border-color: var(--primary);
+  background: var(--chip);
+  box-shadow: var(--shadow);
+}
+
+.team-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.team-manager {
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.team-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Team Members Section */
+.team-members-section {
+  grid-column: span 6;
+}
+
+.team-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.team-member-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--ring);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.team-member-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.team-member-item.selected {
+  border-color: var(--primary);
+  background: var(--chip);
+  box-shadow: var(--shadow);
+}
+
+.member-task-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--ring);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* Member Tasks Section */
+.member-tasks-section {
+  grid-column: span 12;
+  width: 100%;
+}
+
+/* Workspace Table styles */
+.workspace-table-card {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+  overflow: hidden;
+  grid-column: span 12;
+}
+
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.workspace-tabs a {
+  font-weight: 700;
+  color: #475569;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.workspace-tabs a.active {
+  background: #eef2ff;
+  color: #1e293b;
+}
+
+.workspace-toolbar .workspace-sp {
+  flex: 1;
+}
+
+.workspace-toolbar .workspace-l {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.workspace-table-wrap {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.workspace-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.workspace-table thead th {
+  font-size: 12px;
+  color: #64748b;
+  position: sticky;
+  top: 0;
+  background: #fafcff;
+  z-index: 10;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.workspace-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.workspace-priority-badge,
+.workspace-state-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  font-size: 11px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.workspace-no-tasks {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+  background: var(--bg);
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+
+.no-tasks,
+.no-teams,
+.no-members,
+.no-selection {
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.no-teams p,
+.no-members p,
+.no-selection p,
+.no-tasks p {
+  margin: 0;
+  font-size: 14px;
+}
