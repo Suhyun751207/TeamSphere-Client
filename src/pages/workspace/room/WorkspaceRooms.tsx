@@ -49,6 +49,9 @@ function WorkspaceRooms() {
                             const lastMessage = messages.find((msg: any) => msg.id === room.room[0].lastMessageId);
                             if (lastMessage) {
                                 messagesMap[room.roomId] = lastMessage.content || 'No content';
+                                if (messagesMap[room.roomId].length > 20) {
+                                    messagesMap[room.roomId] = messagesMap[room.roomId].slice(0, 20) + "...";
+                                }
                                 return {
                                     ...room,
                                     lastMessageTime: lastMessage.createdAt
@@ -293,8 +296,8 @@ function WorkspaceRooms() {
                         <h3>Members</h3>
                         <div className={styles.headerActions}>
                             {membersLoading && <div className={styles.loadingSpinner}></div>}
-                            <button 
-                                onClick={() => setShowInviteModal(true)} 
+                            <button
+                                onClick={() => setShowInviteModal(true)}
                                 className={styles.addUserButton}
                                 disabled={membersLoading}
                                 title="Add User"
@@ -304,7 +307,7 @@ function WorkspaceRooms() {
                         </div>
                     </div>
                     <div className={styles.membersList}>
-                        {members? (
+                        {members ? (
                             members.map((member) => (
                                 <div key={member.userId} className={styles.memberItem}>
                                     <div className={styles.memberInfo}>

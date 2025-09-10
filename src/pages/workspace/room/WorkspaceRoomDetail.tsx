@@ -22,6 +22,7 @@ function WorkspaceRoomDetail() {
     const [showMembersList, setShowMembersList] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const messageInputRef = useRef<HTMLInputElement>(null);
 
     // Initialize Socket.IO connection
     const {
@@ -132,30 +133,7 @@ function WorkspaceRoomDetail() {
                 setMessages(prev => [...prev, optimisticMessage]);
                 setTimeout(scrollToBottom, 100);
                 
-                // Set a timeout to check if Socket.IO message was successful
-                const timeoutId = setTimeout(() => {
-                    // Check if the optimistic message is still there (not replaced by real message)
-                    setMessages(currentMessages => {
-                        const stillOptimistic = currentMessages.some(msg => 
-                            (msg as any).isOptimistic && 
-                            msg.content === messageContent &&
-                            msg.userId === getUserIdFromCookie()
-                        );
-                        
-                        if (stillOptimistic) {
-                            // Remove the optimistic message if Socket.IO failed
-                            return currentMessages.filter(msg => 
-                                !(msg as any).isOptimistic || 
-                                msg.content !== messageContent ||
-                                msg.userId !== getUserIdFromCookie()
-                            );
-                        }
-                        return currentMessages;
-                    });
-                }, 5000); // 5 second timeout
-                
-                // Store timeout ID for cleanup
-                (optimisticMessage as any).timeoutId = timeoutId;
+                // Keep the optimistic message - no timeout deletion
             } else {
                 const messageRes = await WorkspaceServer.WorkspaceMessageCreate(
                     Number(workspaceId), 
@@ -205,6 +183,9 @@ function WorkspaceRoomDetail() {
             setError('Failed to send workspace message');
         } finally {
             setSending(false);
+            setTimeout(() => {
+                messageInputRef.current?.focus();
+            }, 100);
         }
     };
 
@@ -567,6 +548,7 @@ function WorkspaceRoomDetail() {
             <form onSubmit={sendMessage} className={styles.messageForm}>
                 <div className={styles.inputContainer}>
                     <input
+                        ref={messageInputRef}
                         type="text"
                         value={newMessage}
                         onChange={handleInputChange}

@@ -1,12 +1,66 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import RoomsService from "../../../api/user/rooms/rooms";
-import ProfileService from "../../../api/user/Profile";
+import ProfileService from "../../../api/user/profile/profile";
 import WorkspaceServer from "../../../api/workspace/workspace";
 import useSocket from "../../../hooks/useSocket";
 import { Message, MessageWithProfile } from '../../../interface/Message';
 import { Member } from '../../../interface/Member';
 import styles from './RoomDetail.module.css';
+
+// MessageItem 컴포넌트 - 각 메시지마다 현재 사용자 확인
+interface MessageItemProps {
+    message: MessageWithProfile;
+    formatDate: (dateString: string) => string;
+}
+
+function MessageItem({ message, formatDate }: MessageItemProps) {
+    const [isCurrentUser, setIsCurrentUser] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        const checkCurrentUser = async () => {
+            try {
+                setLoading(true);
+                const profileRes = await ProfileService.getMe();
+                const currentUserId = profileRes.data.user?.id || profileRes.data.profile?.userId || profileRes.data.id;
+                const isOwner = currentUserId === message.userId;
+                setIsCurrentUser(isOwner);
+            } catch (err) {
+                console.error('Failed to check current user:', err);
+                setIsCurrentUser(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkCurrentUser();
+    }, [message.userId, message.id]);
+
+    if (loading) {
+        return (
+            <div className={styles.messageItem}>
+                <div className={styles.loading}>Loading...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`${styles.messageWrapper} ${isCurrentUser ? styles.messageWrapperRight : styles.messageWrapperLeft}`}>
+            <div className={`${styles.messageItem} ${isCurrentUser ? styles.messageItemRight : styles.messageItemLeft}`}>
+                <div className={styles.messageHeader}>
+                    <span className={styles.userId}>{message.userName}</span>
+                </div>
+                <div className={styles.messageContent}>
+                    {message.content}
+                </div>
+            </div>
+            <span className={styles.messageDate}>
+                {formatDate(message.createdAt)}
+            </span>
+        </div>
+    );
+}
 
 
 function RoomDetail() {
@@ -20,6 +74,7 @@ function RoomDetail() {
     const [inviting, setInviting] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [currentUserName, setCurrentUserName] = useState<string>('');
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [typingUsers, setTypingUsers] = useState<Set<number>>(new Set());
     const [typingUserNames, setTypingUserNames] = useState<Map<number, string>>(new Map());
     const [isTyping, setIsTyping] = useState(false);
@@ -27,6 +82,7 @@ function RoomDetail() {
     const [showMembersList, setShowMembersList] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const messageInputRef = useRef<HTMLInputElement>(null);
 
     // Initialize Socket.IO connection
     const {
@@ -54,7 +110,7 @@ function RoomDetail() {
             const membersWithNames = await Promise.all(
                 membersArray.map(async (member: Member) => {
                     try {
-                        const profileRes = await ProfileService.ProfileUserGet(member.userId);
+                        const profileRes = await ProfileService.getProfile(member.userId);
                         return {
                             ...member,
                             userName: profileRes.data.profile?.name || `User ${member.userId}`
@@ -87,7 +143,7 @@ function RoomDetail() {
                 const messagesWithProfiles = await Promise.all(
                     messagesArray.map(async (message: Message) => {
                         try {
-                            const profileRes = await ProfileService.ProfileUserGet(message.userId);
+                            const profileRes = await ProfileService.getProfile(message.userId);
                             const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
                             return { ...message, userName };
                         } catch (err) {
@@ -103,7 +159,7 @@ function RoomDetail() {
                 const messagesWithProfiles = await Promise.all(
                     messagesArray.map(async (message: Message) => {
                         try {
-                            const profileRes = await ProfileService.ProfileUserGet(message.userId);
+                            const profileRes = await ProfileService.getProfile(message.userId);
                             const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
                             return { ...message, userName };
                         } catch (err) {
@@ -147,9 +203,9 @@ function RoomDetail() {
                 let userName = currentUserName;
                 let currentUserId = getUserIdFromCookie();
 
-                const profileAllRes = await ProfileService.ProfileAllGet();
-                // Extract userId from ProfileAllGet response if available
-                currentUserId = profileAllRes.data.user?.id || profileAllRes.data.profile?.userId || 0;
+                // Get current user ID using getMe instead of ProfileAllGet
+                const currentUserRes = await ProfileService.getMe();
+                currentUserId = currentUserRes.data.user?.id || currentUserRes.data.profile?.userId || currentUserRes.data.id || 0;
 
                 const profileRes = await ProfileService.getMe();
                 userName = profileRes.data.profile.name;
@@ -170,17 +226,12 @@ function RoomDetail() {
                 setMessages(prev => [...prev, optimisticMessage]);
                 setTimeout(scrollToBottom, 100);
 
-                // Store timeout ID for cleanup - but don't auto-remove the message
-                // Only remove if we get an explicit error or the real message arrives
                 const timeoutId = setTimeout(() => {
-                    // Don't automatically remove the message - let it stay visible
                     console.log('Socket.IO message timeout, but keeping optimistic message visible');
-                }, 5000);
+                }, 20000);
 
-                // Store timeout ID for cleanup
                 (optimisticMessage as any).timeoutId = timeoutId;
             } else {
-                // When not connected to Socket.IO, create message in DB only
                 const messageRes = await RoomsService.RoomMessageCreate(parseInt(roomId), messageContent);
                 if (messageRes.data && messageRes.data.insertId) {
                     try {
@@ -196,6 +247,9 @@ function RoomDetail() {
             setError('Failed to send message');
         } finally {
             setSending(false);
+            setTimeout(() => {
+                messageInputRef.current?.focus();
+            }, 100);
         }
     };
 
@@ -217,7 +271,6 @@ function RoomDetail() {
         }
     };
 
-    // Helper function to get userId from cookies
     const getUserIdFromCookie = (): number => {
         const cookies = document.cookie.split(';');
         for (let cookie of cookies) {
@@ -231,19 +284,28 @@ function RoomDetail() {
 
     const fetchCurrentUser = async () => {
         try {
-            const profileRes = await ProfileService.ProfileAllGet();
+            const profileRes = await ProfileService.getMe();
+            const userId = profileRes.data.user?.id || profileRes.data.profile?.userId;
             const userName = profileRes.data.user?.name || profileRes.data.profile?.name;
+
+            if (userId) {
+                setCurrentUserId(userId);
+            }
+
             if (userName) {
                 setCurrentUserName(userName);
             } else {
-                // If no name found, try to get userId and set fallback
-                const userId = getUserIdFromCookie();
-                setCurrentUserName(`User ${userId}`);
+                const fallbackUserId = getUserIdFromCookie();
+                setCurrentUserName(`User ${fallbackUserId}`);
+                if (!userId) {
+                    setCurrentUserId(fallbackUserId);
+                }
             }
         } catch (err) {
             console.error('Failed to fetch current user:', err);
             const userId = getUserIdFromCookie();
             setCurrentUserName(`User ${userId}`);
+            setCurrentUserId(userId);
         }
     };
 
@@ -291,7 +353,7 @@ function RoomDetail() {
         const unsubscribeNewMessage = onNewMessage(async (message) => {
             try {
                 // Get user profile for the message
-                const profileRes = await ProfileService.ProfileUserGet(message.userId);
+                const profileRes = await ProfileService.getProfile(message.userId);
                 const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
 
                 const messageWithProfile: MessageWithProfile = {
@@ -319,25 +381,17 @@ function RoomDetail() {
                         msg.userId !== message.userId
                     );
 
-                    // Check if real message already exists to avoid duplicates
                     const exists = filteredMessages.some(msg => msg.id === message.id);
                     if (exists) {
-                        console.log('Message already exists, skipping:', message.id);
                         return filteredMessages;
                     }
-
-                    console.log('Adding new message to state:', message.id);
                     return [...filteredMessages, messageWithProfile];
                 });
 
-                // Update workspace room last message (if this is a workspace room)
                 try {
-                    // Try to update workspace room last message - this might fail if it's not a workspace room
-                    // We'll need to determine the workspace ID somehow, for now we'll skip this
                     await RoomsService.RoomLastMessageUpdate(parseInt(roomId), message.id);
                 } catch (err) {
-                    // Ignore errors - this might not be a workspace room
-                    console.log('Not a workspace room or failed to update workspace room last message');
+                    console.error('Not a workspace room or failed to update workspace room last message');
                 }
 
                 setTimeout(scrollToBottom, 100);
@@ -352,7 +406,6 @@ function RoomDetail() {
                 };
 
                 setMessages(prev => {
-                    // Clear timeout for optimistic message if it exists
                     const optimisticMsg = prev.find(msg =>
                         (msg as any).isOptimistic &&
                         msg.content === message.content &&
@@ -362,7 +415,6 @@ function RoomDetail() {
                         clearTimeout((optimisticMsg as any).timeoutId);
                     }
 
-                    // Remove optimistic message if it exists
                     const filteredMessages = prev.filter(msg =>
                         !(msg as any).isOptimistic ||
                         msg.content !== message.content ||
@@ -377,16 +429,12 @@ function RoomDetail() {
             }
         });
 
-        // Listen for message errors
         const unsubscribeMessageError = onMessageError((error) => {
             console.error('Socket message error:', error);
             setError(`Message error: ${error.error}`);
-
-            // Remove failed optimistic messages
             setMessages(prev => prev.filter(msg => !(msg as any).isOptimistic));
         });
 
-        // Helper function to get userId from cookies
         const getUserIdFromCookie = (): number => {
             const cookies = document.cookie.split(';');
             for (let cookie of cookies) {
@@ -398,10 +446,9 @@ function RoomDetail() {
             return 0;
         };
 
-        // Listen for typing indicators
         const unsubscribeUserTyping = onUserTyping(async (data) => {
             const currentUserId = getUserIdFromCookie();
-            if (data.userId === currentUserId) return; // Ignore own typing
+            if (data.userId === currentUserId) return;
 
             setTypingUsers(prev => {
                 const newSet = new Set(prev);
@@ -413,13 +460,11 @@ function RoomDetail() {
                 return newSet;
             });
 
-            // Fetch user name if not already cached and user is typing
             if (data.isTyping) {
                 setTypingUserNames(prev => {
                     if (!prev.has(data.userId)) {
-                        // Fetch user name asynchronously
-                        ProfileService.ProfileUserGet(data.userId)
-                            .then(response => {
+                        ProfileService.getProfile(data.userId)
+                            .then((response: any) => {
                                 setTypingUserNames(prevNames =>
                                     new Map(prevNames).set(data.userId, response.data.profile.name || `User ${data.userId}`)
                                 );
@@ -429,29 +474,25 @@ function RoomDetail() {
                                     new Map(prevNames).set(data.userId, `User ${data.userId}`)
                                 );
                             });
-                        return new Map(prev).set(data.userId, `User ${data.userId}`); // Temporary name
+                        return new Map(prev).set(data.userId, `User ${data.userId}`);
                     }
                     return prev;
                 });
             }
         });
 
-        // Listen for user join/leave events to refresh member list
         const unsubscribeUserOnline = onUserOnline((data) => {
             if (roomId && parseInt(roomId) === data.roomId) {
-                // Refresh member list to get updated online status from server
                 loadMembers();
             }
         });
 
         const unsubscribeUserOffline = onUserOffline((data) => {
             if (roomId && parseInt(roomId) === data.roomId) {
-                // Refresh member list to get updated online status from server
                 loadMembers();
             }
         });
 
-        // Cleanup function
         return () => {
             if (roomId) {
                 leaveRoom(parseInt(roomId));
@@ -464,7 +505,6 @@ function RoomDetail() {
         };
     }, [roomId, isConnected, onNewMessage, onMessageError, onUserTyping, onUserOnline, onUserOffline, joinRoom, leaveRoom, loadMembers]);
 
-    // Load members when room changes or online users change
     useEffect(() => {
         loadMembers();
     }, [loadMembers]);
@@ -482,12 +522,31 @@ function RoomDetail() {
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const formatDateSeparator = (dateString: string) => {
+        return new Date(dateString).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+            hour: 'numeric',
+            hour12: true
+        });
+    };
+
+    const shouldShowDateSeparator = (currentMessage: MessageWithProfile, previousMessage?: MessageWithProfile) => {
+        if (!previousMessage) return true;
+        
+        const currentDate = new Date(currentMessage.createdAt);
+        const previousDate = new Date(previousMessage.createdAt);
+        
+        // 시간이 다르면 구분선 표시
+        return currentDate.getHours() !== previousDate.getHours() || 
+               currentDate.getDate() !== previousDate.getDate();
     };
 
     if (!roomId) {
@@ -544,19 +603,26 @@ function RoomDetail() {
                     </div>
                 ) : (
                     <div className={styles.messagesList}>
-                        {messages.map((message) => (
-                            <div key={message.id} className={styles.messageItem}>
-                                <div className={styles.messageHeader}>
-                                    <span className={styles.userId}>{message.userName}</span>
-                                    <span className={styles.messageDate}>
-                                        {formatDate(message.createdAt)}
-                                    </span>
+                        {messages.map((message, index) => {
+                            const previousMessage = index > 0 ? messages[index - 1] : undefined;
+                            const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
+                            
+                            return (
+                                <div key={message.id}>
+                                    {showDateSeparator && (
+                                        <div className={styles.dateSeparator}>
+                                            <span className={styles.dateSeparatorText}>
+                                                {formatDateSeparator(message.createdAt)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <MessageItem
+                                        message={message}
+                                        formatDate={formatDate}
+                                    />
                                 </div>
-                                <div className={styles.messageContent}>
-                                    {message.content}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         <div ref={messagesEndRef} />
                     </div>
                 )}
@@ -607,6 +673,7 @@ function RoomDetail() {
             <form onSubmit={sendMessage} className={styles.messageForm}>
                 <div className={styles.inputContainer}>
                     <input
+                        ref={messageInputRef}
                         type="text"
                         value={newMessage}
                         onChange={handleInputChange}

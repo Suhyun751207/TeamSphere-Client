@@ -57,26 +57,42 @@ function Workspace() {
     const [addingMember, setAddingMember] = useState(false);
 
     // Calculate weekly attendance data for line chart
-    const getWeeklyAttendanceData = (membersData: any[], workspaceInfo: any): WeeklyAttendanceData[] => {
-        if (!workspaceInfo || !membersData) return [];
+    const getWeeklyAttendanceData = useCallback((membersData: any[], workspaceInfo: any): WeeklyAttendanceData[] => {
+        if (!workspaceInfo || !membersData || membersData.length === 0) {
+            return [];
+        }
         
+        // Use Korean timezone for consistent date calculation
         const today = new Date();
+        const kstOffset = 9 * 60; // KST is UTC+9
+        const utc = today.getTime() + (today.getTimezoneOffset() * 60000);
+        const kstTime = new Date(utc + (kstOffset * 60000));
+        
         const weekData: WeeklyAttendanceData[] = [];
         
         for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
+            const date = new Date(kstTime);
+            date.setDate(kstTime.getDate() - i);
             const dateStr = date.toISOString().split('T')[0];
             
             // Count unique members who attended on this specific date
             const attendedMemberIds = new Set();
-            workspaceInfo?.memberAttendance?.forEach((member: any) => {
-                const hasAttendedToday = member.attendanceRecords.some((record: any) => {
-                    const recordDate = new Date(record.createdAt).toISOString().split('T')[0];
-                    return recordDate === dateStr;
-                });
-                if (hasAttendedToday) {
-                    attendedMemberIds.add(member.userId);
+            
+            // Check if memberAttendance exists and has data
+            const memberAttendance = workspaceInfo?.memberAttendance || [];
+            
+            memberAttendance.forEach((member: any) => {
+                if (member.attendanceRecords && Array.isArray(member.attendanceRecords)) {
+                    const hasAttendedToday = member.attendanceRecords.some((record: any) => {
+                        // Convert UTC to KST (UTC+9)
+                        const utcDate = new Date(record.createdAt);
+                        const kstDate = new Date(utcDate.getTime() + (9 * 60 * 60 * 1000));
+                        const recordDate = kstDate.toISOString().split('T')[0];
+                        return recordDate === dateStr;
+                    });
+                    if (hasAttendedToday) {
+                        attendedMemberIds.add(member.userId);
+                    }
                 }
             });
             
@@ -86,14 +102,14 @@ function Workspace() {
             weekData.push({
                 date: dateStr,
                 day: date.toLocaleDateString('ko-KR', { weekday: 'short' }),
-                attendanceRate: Math.min(Math.round(attendanceRate), 100),
+                attendanceRate: Math.round(attendanceRate * 100) / 100,
                 attendedCount: attendedCount,
                 totalCount: membersData.length
             });
         }
         
         return weekData;
-    };
+    }, []);
 
     useEffect(() => {
         if (workspaceId) {
@@ -220,7 +236,7 @@ function Workspace() {
         if (!workspaceData) return [];
         const members = workspaceData.workspaceMember || [];
         return getWeeklyAttendanceData(members, workspaceData);
-    }, [workspaceData]);
+    }, [workspaceData, getWeeklyAttendanceData]);
 
     // Chart.js data configuration
     const chartData = useMemo(() => ({
@@ -237,7 +253,7 @@ function Workspace() {
                 pointBorderWidth: 2,
                 pointRadius: 6,
                 pointHoverRadius: 8,
-                tension: 0.4,
+                tension: 0,
                 fill: true,
             },
         ],
@@ -463,9 +479,27 @@ function Workspace() {
                     {/* Weekly Attendance Line Chart */}
                     <div className="weekly-attendance-chart">
                         <h4>주간 출석률 추이</h4>
-                        <div className="chart-container" style={{ height: '300px', marginTop: '20px' }}>
-                            <Line data={chartData} options={chartOptions} />
-                        </div>
+                        {weeklyData.length > 0 ? (
+                            <div className="chart-container" style={{ height: '300px', marginTop: '20px' }}>
+                                <Line data={chartData} options={chartOptions} />
+                            </div>
+                        ) : (
+                            <div style={{ 
+                                height: '300px', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                backgroundColor: '#f8f9fa',
+                                border: '1px dashed #dee2e6',
+                                borderRadius: '8px',
+                                marginTop: '20px'
+                            }}>
+                                <div style={{ textAlign: 'center', color: '#6c757d' }}>
+                                    <p>출석 데이터가 없습니다</p>
+                                    <small>멤버들의 출석 기록이 생성되면 그래프가 표시됩니다</small>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </section>
 

@@ -305,80 +305,81 @@ export default function Dashboard() {
         }
     };
 
-    const generateMonthlyCalendarData = (): MonthData[] => {
+    const generateMonthlyCalendar = () => {
         const today = new Date();
-        const todayStr = today.toDateString();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        
         const attendedDates = new Set(
-            attendanceRecordsState.map(record => new Date(record.createdAt).toDateString())
+            attendanceRecordsState.map(record => {
+                const recordDate = new Date(record.createdAt);
+                if (recordDate.getFullYear() === year && recordDate.getMonth() === month) {
+                    return recordDate.getDate();
+                }
+                return null;
+            }).filter(Boolean)
         );
 
-        const months: MonthData[] = [];
-        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-
-        // Get user signup date
-        const signupDate = new Date(user.createdAt);
-        const signupYear = signupDate.getFullYear();
-        const signupMonth = signupDate.getMonth();
-
-        // Calculate end date (next month from current month)
-        const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-        const endYear = nextMonth.getFullYear();
-        const endMonth = nextMonth.getMonth();
-
-        // Generate months from signup month to next month
-        let currentYear = signupYear;
-        let currentMonth = signupMonth;
-
-        while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-            // Get first and last day of the month
-            const firstDay = new Date(currentYear, currentMonth, 1);
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-
-            const days: CalendarDay[] = [];
-
-            // Add empty days for the beginning of the month (to align with weekdays)
-            const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
-            for (let j = 0; j < firstDayOfWeek; j++) {
-                days.push({
-                    date: '',
-                    attended: false,
-                    isToday: false,
-                    isEmpty: true
-                });
+        const weeks = [];
+        let currentWeek = [];
+        
+        // Add empty cells for days before the first day of the month
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            currentWeek.push(
+                <div key={`empty-${i}`} className="calendar-day empty"></div>
+            );
+        }
+        
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const isToday = day === today.getDate();
+            const isAttended = attendedDates.has(day);
+            const isPast = day < today.getDate();
+            
+            let level = 0;
+            if (isAttended) {
+                level = 4; // Maximum intensity for attended days
             }
-
-            // Add all days of the month
-            const current = new Date(firstDay);
-            while (current <= lastDay) {
-                const dateStr = current.toDateString();
-                const isValidDate = current <= today;
-
-                days.push({
-                    date: current.getDate().toString(),
-                    attended: isValidDate && attendedDates.has(dateStr),
-                    isToday: dateStr === todayStr,
-                    isEmpty: false
-                });
-
-                current.setDate(current.getDate() + 1);
-            }
-
-            months.push({
-                year: currentYear,
-                month: currentMonth,
-                monthName: monthNames[currentMonth],
-                days
-            });
-
-            // Move to next month
-            currentMonth++;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
+            
+            currentWeek.push(
+                <div
+                    key={day}
+                    className={`calendar-day level-${level} ${isToday ? 'today' : ''} ${isPast ? 'past' : ''}`}
+                    title={`${year}년 ${month + 1}월 ${day}일${isAttended ? ' - 출석함' : isPast ? ' - 출석안함' : ''}`}
+                >
+                    <span className="day-number">{day}</span>
+                </div>
+            );
+            
+            // If we've filled a week (7 days) or reached the end of the month
+            if (currentWeek.length === 7) {
+                weeks.push(
+                    <div key={`week-${weeks.length}`} className="calendar-week">
+                        {currentWeek}
+                    </div>
+                );
+                currentWeek = [];
             }
         }
-
-        return months;
+        
+        // Add remaining empty cells to complete the last week
+        while (currentWeek.length > 0 && currentWeek.length < 7) {
+            currentWeek.push(
+                <div key={`empty-end-${currentWeek.length}`} className="calendar-day empty"></div>
+            );
+        }
+        
+        if (currentWeek.length > 0) {
+            weeks.push(
+                <div key={`week-${weeks.length}`} className="calendar-week">
+                    {currentWeek}
+                </div>
+            );
+        }
+        
+        return weeks;
     };
 
     const attendanceStats = calculateAttendanceRate();
@@ -729,6 +730,27 @@ export default function Dashboard() {
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                </div>
+
+                                {/* Monthly Attendance Calendar - GitHub Style */}
+                                <div className="monthly-attendance-calendar">
+                                    <h4>이번 달 출석 현황</h4>
+                                    <div className="calendar-container">
+                                        <div className="calendar-grid">
+                                            {generateMonthlyCalendar()}
+                                        </div>
+                                        <div className="calendar-legend">
+                                            <span className="legend-text">적음</span>
+                                            <div className="legend-squares">
+                                                <div className="legend-square level-0"></div>
+                                                <div className="legend-square level-1"></div>
+                                                <div className="legend-square level-2"></div>
+                                                <div className="legend-square level-3"></div>
+                                                <div className="legend-square level-4"></div>
+                                            </div>
+                                            <span className="legend-text">많음</span>
+                                        </div>
                                     </div>
                                 </div>
 

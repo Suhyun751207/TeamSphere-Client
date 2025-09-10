@@ -45,6 +45,9 @@ function Rooms() {
                         try {
                             const messageRes = await RoomsService.MessageSelect(room.roomId, messageId);
                             messagesMap[room.roomId] = messageRes.data.content || 'No content';
+                            if (messagesMap[room.roomId].length > 20) {
+                                messagesMap[room.roomId] = messagesMap[room.roomId].slice(0, 20) + "...";
+                            }
                             return {
                                 ...room,
                                 lastMessageTime: messageRes.data.createdAt
