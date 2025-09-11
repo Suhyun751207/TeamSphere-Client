@@ -7,32 +7,32 @@
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
-  
+
   /* Clean Backgrounds */
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
   --bg-hover: #f1f5f9;
   --bg-accent: #f0f9ff;
-  
+
   /* Readable Text */
   --text-primary: #1e293b;
   --text-secondary: #475569;
   --text-muted: #64748b;
   --text-light: #94a3b8;
-  
+
   /* Simple Borders */
   --border: #e2e8f0;
   --border-light: #f1f5f9;
-  
+
   /* Natural Shadows */
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  
+
   /* Activity Log Colors */
   --activity-bg: #f8fafc;
   --activity-hover: #f1f5f9;
-  
+
   /* Comfortable Radius */
   --radius: 8px;
   --radius-lg: 12px;
@@ -404,15 +404,15 @@
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .activity-users-list {
     order: 2;
   }
-  
+
   .activity-logs-list {
     order: 1;
   }
-  
+
   .users-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -555,9 +555,38 @@ body {
 
 .chart-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-team-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow);
+}
+
+.add-team-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .chart-header h3 {
@@ -708,6 +737,15 @@ body {
   font-size: 1.1rem;
 }
 
+.member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1px solid #000
+}
+
+
 .member-info {
   flex: 1;
 }
@@ -827,7 +865,8 @@ body {
   gap: 4px;
 }
 
-.room-date, .last-message {
+.room-date,
+.last-message {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
@@ -908,7 +947,7 @@ body {
   .grid-workspace {
     grid-template-columns: repeat(8, 1fr);
   }
-  
+
   /* 출석 현황 섹션 */
   .attendance-section {
     grid-column: span 8;
@@ -918,7 +957,7 @@ body {
   .members-section {
     grid-column: span 4;
   }
-  
+
   .stats-section,
   .workspace-rooms-section,
   .teams-section,
@@ -931,12 +970,12 @@ body {
   .workspace-dashboard {
     padding: 16px;
   }
-  
+
   .grid-workspace {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .workspace-header,
   .attendance-chart,
   .members-section,
@@ -946,23 +985,23 @@ body {
   .team-members-section {
     grid-column: span 1;
   }
-  
+
   .attendance-summary {
     flex-direction: column;
     align-items: center;
     gap: 20px;
   }
-  
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .workspace-info {
     flex-direction: column;
     text-align: center;
     gap: 16px;
   }
-  
+
   .workspace-details h1 {
     font-size: 2rem;
   }

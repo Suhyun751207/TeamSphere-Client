@@ -7,6 +7,59 @@ import { Message, MessageWithProfile } from '../../../interface/Message';
 import { Member } from '../../../interface/Member';
 import styles from './WorkspaceRoomDetail.module.css';
 
+interface MessageItemProps {
+    message: MessageWithProfile;
+    formatDate: (dateString: string) => string;
+}
+
+function MessageItem({ message, formatDate }: MessageItemProps) {
+    const [isCurrentUser, setIsCurrentUser] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        const checkCurrentUser = async () => {
+            try {
+                setLoading(true);
+                const profileRes = await ProfileService.getMe();
+                const currentUserId = profileRes.data.user?.id || profileRes.data.profile?.userId || profileRes.data.id;
+                const isOwner = currentUserId === message.userId;
+                setIsCurrentUser(isOwner);
+            } catch (err) {
+                console.error('Failed to check current user:', err);
+                setIsCurrentUser(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkCurrentUser();
+    }, [message.userId, message.id]);
+
+    if (loading) {
+        return (
+            <div className={styles.messageItem}>
+                <div className={styles.loading}>Loading...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`${styles.workspaceMessageWrapper} ${isCurrentUser ? styles.workspaceMessageWrapperRight : styles.workspaceMessageWrapperLeft}`}>
+            <div className={`${styles.workspaceMessageItem} ${isCurrentUser ? styles.workspaceMessageItemRight : styles.workspaceMessageItemLeft}`}>
+                <div className={styles.workspaceMessageHeader}>
+                    <span className={styles.workspaceUserId}>{message.userName}</span>
+                </div>
+                <div className={styles.workspaceMessageContent}>
+                    {message.content}
+                </div>
+            </div>
+            <span className={styles.workspaceMessageDate}>
+                {formatDate(message.createdAt)}
+            </span>
+        </div>
+    );
+}
+
 function WorkspaceRoomDetail() {
     const { workspaceId, roomId } = useParams<{ workspaceId: string; roomId: string }>();
     const [messages, setMessages] = useState<MessageWithProfile[]>([]);
@@ -19,6 +72,7 @@ function WorkspaceRoomDetail() {
     const [typingUserNames, setTypingUserNames] = useState<Map<number, string>>(new Map());
     const [isTyping, setIsTyping] = useState(false);
     const [members, setMembers] = useState<Member[]>([]);
+    const [roomTitle, setRoomTitle] = useState<string>('');
     const [showMembersList, setShowMembersList] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,8 +97,6 @@ function WorkspaceRoomDetail() {
         if (!roomId || !workspaceId) return;
         
         try {
-            // Note: We'll need workspace room members API
-            // For now, we'll use a placeholder
             setMembers([]);
         } catch (err) {
             console.error('Failed to load members:', err);
@@ -57,7 +109,8 @@ function WorkspaceRoomDetail() {
         try {
             setLoading(true);
             const res = await WorkspaceServer.WorkspaceMessageList(Number(workspaceId), Number(roomId));
-            
+            const roomInfo = await WorkspaceServer.WorkspaceRoomInfo(Number(workspaceId), Number(roomId));
+            setRoomTitle(roomInfo.data.room.title);
             const messagesArray = Array.isArray(res.data) ? res.data : [];
             const messagesWithProfiles = await Promise.all(
                 messagesArray.map(async (message: Message) => {
@@ -423,12 +476,31 @@ function WorkspaceRoomDetail() {
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    const formatDateSeparator = (dateString: string) => {
+        return new Date(dateString).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+            hour: 'numeric',
+            hour12: true
+        });
+    };
+
+    const shouldShowDateSeparator = (currentMessage: MessageWithProfile, previousMessage?: MessageWithProfile) => {
+        if (!previousMessage) return true;
+        
+        const currentDate = new Date(currentMessage.createdAt);
+        const previousDate = new Date(previousMessage.createdAt);
+        
+        // 시간이 다르면 구분선 표시
+        return currentDate.getHours() !== previousDate.getHours() || 
+               currentDate.getDate() !== previousDate.getDate();
     };
 
     if (!roomId || !workspaceId) {
@@ -442,7 +514,11 @@ function WorkspaceRoomDetail() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h2>Workspace Room #{roomId}</h2>
+                {roomTitle ? (
+                    <h2>{roomTitle}</h2>
+                ) : (
+                    <h2>Workspace Room #{roomId}</h2>
+                )}
                 <div className={styles.headerButtons}>
                     <div className={styles.connectionStatus}>
                         {isConnected ? (
@@ -485,19 +561,26 @@ function WorkspaceRoomDetail() {
                     </div>
                 ) : (
                     <div className={styles.messagesList}>
-                        {messages.map((message) => (
-                            <div key={message.id} className={styles.messageItem}>
-                                <div className={styles.messageHeader}>
-                                    <span className={styles.userId}>{message.userName}</span>
-                                    <span className={styles.messageDate}>
-                                        {formatDate(message.createdAt)}
-                                    </span>
+                        {messages.map((message, index) => {
+                            const previousMessage = index > 0 ? messages[index - 1] : undefined;
+                            const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
+                            
+                            return (
+                                <div key={message.id}>
+                                    {showDateSeparator && (
+                                        <div className={styles.workspaceDateSeparator}>
+                                            <span>
+                                                {formatDateSeparator(message.createdAt)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <MessageItem
+                                        message={message}
+                                        formatDate={formatDate}
+                                    />
                                 </div>
-                                <div className={styles.messageContent}>
-                                    {message.content}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         <div ref={messagesEndRef} />
                     </div>
                 )}

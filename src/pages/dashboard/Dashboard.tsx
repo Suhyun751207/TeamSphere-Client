@@ -272,11 +272,18 @@ export default function Dashboard() {
     };
 
     const filterActivityLogs = (logs: any[]) => {
-        if (!activityFilter.trim()) return logs;
-        return logs.filter(log =>
-            log.message.toLowerCase().includes(activityFilter.toLowerCase()) ||
-            (workspaceNames[log.workspaceId] && workspaceNames[log.workspaceId].toLowerCase().includes(activityFilter.toLowerCase()))
-        );
+        let filteredLogs = logs;
+        
+        // 필터링 적용
+        if (activityFilter.trim()) {
+            filteredLogs = logs.filter(log =>
+                log.message.toLowerCase().includes(activityFilter.toLowerCase()) ||
+                (workspaceNames[log.workspaceId] && workspaceNames[log.workspaceId].toLowerCase().includes(activityFilter.toLowerCase()))
+            );
+        }
+        
+        // 최신 순으로 정렬 (createdAt 기준 내림차순)
+        return filteredLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     };
 
     const getActivityIcon = (message: string) => {

@@ -148,6 +148,7 @@
     justify-content: center;
     font-weight: 600;
     font-size: 18px;
+    border-radius: 50%;
 }
 
 .dropdown-user-info {
@@ -328,9 +329,25 @@
     letter-spacing: 0.025em;
 }
 
+.profile-role-badge.free {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
 .profile-role-badge.admin {
     background: var(--danger-light);
     color: var(--danger);
+}
+
+.profile-role-badge.pro {
+    background: #ddd6fe;
+    color: #7c3aed;
+}
+
+.profile-role-badge.team {
+    background: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fbbf24;
 }
 
 .profile-role-badge.manager {

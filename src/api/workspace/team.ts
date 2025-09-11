@@ -1,4 +1,6 @@
 import api from "../Api";
+import { TeamCreateRequest } from "../../interface/Workspace";
+
 
 // 워크스페이스 팀 목록 조회
 async function getWorkspaceTeams(workspaceId: number) {
@@ -6,7 +8,7 @@ async function getWorkspaceTeams(workspaceId: number) {
 }
 
 // 워크스페이스 팀 생성
-async function createWorkspaceTeam(workspaceId: number, data: any) {
+async function createWorkspaceTeam(workspaceId: number, data: TeamCreateRequest) {
     return await api.post(`/workspace/${workspaceId}/teams`, data);
 }
 
@@ -30,13 +32,26 @@ async function getTeamTasks(workspaceId: number, teamId: number) {
     return await api.get(`/workspace/${workspaceId}/teams/${teamId}/tasks`);
 }
 
+
+
+// 팀 대시보드 조회
+async function getTeamDashboard(workspaceId: number, teamId: number) {
+    return await api.get(`/workspace/${workspaceId}/teams/${teamId}/dashboard`);
+}
+
+
+
+
+
+
 const TeamAPI = {
     getWorkspaceTeams,
     createWorkspaceTeam,
     getWorkspaceMembers,
     getWorkspaceActivityLogs,
     getWorkspaceAttendance,
-    getTeamTasks
+    getTeamTasks,
+    getTeamDashboard
 };
 
 export default TeamAPI;

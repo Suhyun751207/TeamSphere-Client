@@ -72,6 +72,12 @@ async function WorkspaceActivityLogCreate(workspaceId: number, data: ActivityLog
     return await api.post(`/workspace/${workspaceId}/activityLog`, data);
 }
 
+//워크스페이스 룸 정보 조회
+async function WorkspaceRoomInfo(workspaceId: number, roomId: number) {
+    return await api.get(`/workspace/${workspaceId}/message/${roomId}/info`);
+}
+
+
 const WorkspaceServer = {
     WorkspaceList,
     WorkspaceCreate,
@@ -86,7 +92,8 @@ const WorkspaceServer = {
     WorkspaceRoomMemberAdd,
     WorkspaceMemberAdd,
     WorkspaceActivityLogList,
-    WorkspaceActivityLogCreate
+    WorkspaceActivityLogCreate,
+    WorkspaceRoomInfo
 };
 
 export default WorkspaceServer;

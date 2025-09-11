@@ -132,6 +132,54 @@
     gap: 16px;
 }
 
+/* Message wrapper styles for alignment */
+.workspaceMessageWrapper {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.workspaceMessageWrapperLeft {
+    align-items: flex-start;
+}
+
+.workspaceMessageWrapperRight {
+    align-items: flex-end;
+}
+
+.workspaceMessageItem {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    word-wrap: break-word;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.workspaceMessageItemLeft {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 4px;
+}
+
+.workspaceMessageItemRight {
+    background: #f1f5f9;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-bottom-right-radius: 4px;
+}
+
+.workspaceMessageItemLeft:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+}
+
+.workspaceMessageItemRight:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+}
+
+/* Legacy message item for backward compatibility */
 .messageItem {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -152,9 +200,30 @@
     margin-bottom: 8px;
 }
 
+.workspaceMessageHeader {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+    gap: 8px;
+}
+
 .userId {
     font-weight: 600;
     font-size: 14px;
+    color: #2563eb;
+}
+
+.workspaceUserId {
+    font-weight: 600;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.workspaceMessageItemLeft .workspaceUserId {
+    color: #2563eb;
+}
+
+.workspaceMessageItemRight .workspaceUserId {
     color: #2563eb;
 }
 
@@ -163,11 +232,42 @@
     color: #64748b;
 }
 
+.workspaceMessageDate {
+    font-size: 11px;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.workspaceMessageWrapperLeft .workspaceMessageDate {
+    color: #64748b;
+    text-align: left;
+}
+
+.workspaceMessageWrapperRight .workspaceMessageDate {
+    color: #64748b;
+    text-align: right;
+}
+
 .messageContent {
     font-size: 14px;
     color: #1e293b;
     line-height: 1.5;
     word-wrap: break-word;
+}
+
+.workspaceMessageContent {
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    margin: 0;
+}
+
+.workspaceMessageItemLeft .workspaceMessageContent {
+    color: #1e293b;
+}
+
+.workspaceMessageItemRight .workspaceMessageContent {
+    color: #1e293b;
 }
 
 .typingIndicator {
@@ -335,6 +435,30 @@
     background: #94a3b8;
     cursor: not-allowed;
     transform: none;
+}
+
+/* Date separator styles */
+.workspaceDateSeparator {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.workspaceDateSeparator::before,
+.workspaceDateSeparator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.workspaceDateSeparator span {
+    padding: 0 16px;
+    font-size: 12px;
+    color: #64748b;
+    background: white;
+    font-weight: 500;
 }
 
 /* Responsive design */

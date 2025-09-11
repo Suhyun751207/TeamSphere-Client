@@ -70,3 +70,7 @@ export interface ActivityLogWithUser extends ActivityLog {
         imagePath?: string;
     };
 }
+
+export interface TeamCreateRequest {
+    name: string;
+}

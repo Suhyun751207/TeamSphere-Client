@@ -2,8 +2,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import WorkspaceServer from "../../api/workspace/workspace";
 import RoomsService from "../../api/user/rooms/rooms";
+import TeamAPI from "../../api/workspace/team";
 import { WorkspaceDashboardData } from "../../interface/WorkspaceDashboard";
-import { WorkspaceMemberCreateRequest, ActivityLog, ActivityLogWithUser, ActivityLogsCreate } from "../../interface/Workspace";
+import { WorkspaceMemberCreateRequest, ActivityLog, ActivityLogWithUser, ActivityLogsCreate, TeamCreateRequest } from "../../interface/Workspace";
 import Footer from "../../components/Footer";
 import {
     Chart as ChartJS,
@@ -67,6 +68,13 @@ function Workspace() {
     });
     const [addingActivityLog, setAddingActivityLog] = useState(false);
     const [selectedActivityUser, setSelectedActivityUser] = useState<number | null>(null);
+
+    // Team creation state
+    const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+    const [newTeamData, setNewTeamData] = useState<TeamCreateRequest>({
+        name: ''
+    });
+    const [creatingTeam, setCreatingTeam] = useState(false);
 
     // Calculate weekly attendance data for line chart
     const getWeeklyAttendanceData = useCallback((membersData: any[], workspaceInfo: any): WeeklyAttendanceData[] => {
@@ -233,10 +241,10 @@ function Workspace() {
             });
 
             // Sort logs by createdAt in descending order (newest first)
-            const sortedLogs = logsWithUsers.sort((a: ActivityLogWithUser, b: ActivityLogWithUser) => 
+            const sortedLogs = logsWithUsers.sort((a: ActivityLogWithUser, b: ActivityLogWithUser) =>
                 new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
-            
+
             setActivityLogs(sortedLogs);
         } catch (error) {
             console.error("Activity logs fetch error:", error);
@@ -355,6 +363,42 @@ function Workspace() {
 
     const handleMemberFormChange = (field: keyof WorkspaceMemberCreateRequest, value: string | number) => {
         setNewMemberData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    // Team creation functions
+    const handleCreateTeam = async () => {
+        if (!workspaceId || !newTeamData.name.trim()) {
+            alert('팀 이름을 입력해주세요.');
+            return;
+        }
+
+        try {
+            setCreatingTeam(true);
+            await TeamAPI.createWorkspaceTeam(Number(workspaceId), newTeamData);
+            
+            // Refresh workspace data to show new team
+            const res = await WorkspaceServer.WorkspaceList(Number(workspaceId));
+            setWorkspaceData(res.data);
+            
+            // Reset form and close modal
+            setNewTeamData({ name: '' });
+            setShowCreateTeamModal(false);
+            
+            alert("팀 생성 완료");
+        } catch (err: any) {
+            console.error('Failed to create team:', err);
+            const errorMessage = err.response?.data?.message || '팀 생성에 실패했습니다.';
+            alert(errorMessage);
+        } finally {
+            setCreatingTeam(false);
+        }
+    };
+
+    const handleTeamFormChange = (field: keyof TeamCreateRequest, value: string) => {
+        setNewTeamData(prev => ({
             ...prev,
             [field]: value
         }));
@@ -664,7 +708,13 @@ function Workspace() {
                                 return (
                                     <div key={member.id} className="member-item">
                                         <div className="member-avatar">
-                                            {profile ? getInitials(profile.name) : 'U'}
+                                            {profile?.imagePath ? (
+                                                <img src={profile.imagePath} alt={profile.name} />
+                                            ) : (
+                                                <div className="dropdown-avatar-placeholder">
+                                                    {getInitials(profile?.name || 'U')}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="member-info">
                                             <div className="member-name">
@@ -925,7 +975,16 @@ function Workspace() {
                     <section className="teams-section card pad">
                         <div className="chart-header">
                             <h3>팀 목록</h3>
-                            <span>총 {teamDetails.length}개</span>
+                            <div className="header-actions">
+                                <span>총 {teamDetails.length}개</span>
+                                <button 
+                                    className="add-team-btn"
+                                    onClick={() => setShowCreateTeamModal(true)}
+                                    title="새 팀 생성"
+                                >
+                                    +
+                                </button>
+                            </div>
                         </div>
                         {teamDetails.length > 0 ? (
                             <div className="teams-grid">
@@ -1257,6 +1316,94 @@ function Workspace() {
                         </div>
                     </div>
                 )}
+
+                {/* Team Creation Modal */}
+                {showCreateTeamModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h3>새 팀 생성</h3>
+                                <button
+                                    type="button"
+                                    className="modal-close"
+                                    onClick={() => {
+                                        setShowCreateTeamModal(false);
+                                        setNewTeamData({ name: '' });
+                                    }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '20px',
+                                        cursor: 'pointer',
+                                        color: '#666'
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handleCreateTeam();
+                            }}>
+                                <div className="form-group">
+                                    <label htmlFor="teamName">팀 이름</label>
+                                    <input
+                                        type="text"
+                                        id="teamName"
+                                        value={newTeamData.name}
+                                        onChange={(e) => handleTeamFormChange('name', e.target.value)}
+                                        placeholder="팀 이름을 입력하세요..."
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '14px'
+                                        }}
+                                    />
+                                </div>
+                                <div className="form-actions">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowCreateTeamModal(false);
+                                            setNewTeamData({ name: '' });
+                                        }}
+                                        disabled={creatingTeam}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            backgroundColor: 'white',
+                                            cursor: creatingTeam ? 'not-allowed' : 'pointer',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        취소
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={creatingTeam || !newTeamData.name.trim()}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            backgroundColor: newTeamData.name.trim() ? '#28a745' : '#ccc',
+                                            color: 'white',
+                                            cursor: (creatingTeam || !newTeamData.name.trim()) ? 'not-allowed' : 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        {creatingTeam ? '생성 중...' : '생성'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
             </div>
             <Footer />
         </>
