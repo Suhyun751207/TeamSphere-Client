@@ -164,7 +164,6 @@ export default function Dashboard() {
     }
 
     const { user, profile, activityLog, attendanceRecords, rooms, workspaces } = dashboardData;
-
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('ko-KR');
     };
@@ -426,9 +425,15 @@ export default function Dashboard() {
                 <div className="topbar">
                     <div className="title">Dashboard</div>
                     <div className="spacer"></div>
-                    <div className="user-info" ref={dropdownRef}>
+                    <div className="user-info-dashboard" ref={dropdownRef}>
                         <div className="avatar" title={profile.name} onClick={toggleUserDropdown}>
-                            {getInitials(profile.name)}
+                            {profile.imagePath ? (
+                                <img src={profile.imagePath} alt={profile.name} />
+                            ) : (
+                                <div className="dropdown-avatar-placeholder">
+                                    {getInitials(profile.name)}
+                                </div>
+                            )}
                         </div>
                         {showUserDropdown && (
                             <div className="user-dropdown">
@@ -449,7 +454,7 @@ export default function Dashboard() {
                                 </div>
                                 <div className="dropdown-divider"></div>
                                 <div className="dropdown-menu">
-                                    <button 
+                                    <button
                                         className="dropdown-item"
                                         onClick={() => {
                                             navigate('/profile');
@@ -459,7 +464,7 @@ export default function Dashboard() {
                                         <span className="dropdown-icon">⚙️</span>
                                         프로필 설정
                                     </button>
-                                    <button 
+                                    <button
                                         className="dropdown-item"
                                         onClick={() => {
                                             navigate('/user/profile');
@@ -470,7 +475,7 @@ export default function Dashboard() {
                                         내 정보
                                     </button>
                                     <div className="dropdown-divider"></div>
-                                    <button 
+                                    <button
                                         className="dropdown-item logout-item"
                                         onClick={() => {
                                             handleLogout();

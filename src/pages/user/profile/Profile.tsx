@@ -107,43 +107,6 @@ function Profile() {
                     </div>
                 </section>
             )}
-
-            {/* All Users Profiles */}
-            <section className="all-users-section">
-                <h2>팀 멤버 프로필</h2>
-                <div className="profiles-grid">
-                    {mergedData.map((item) => (
-                        <div key={item.userId} className="profile-card">
-                            <div className="profile-avatar">
-                                {item.imagePath ? (
-                                    <img src={item.imagePath} alt="프로필" />
-                                ) : (
-                                    <div className="avatar-placeholder">
-                                        {item.name?.charAt(0) || "U"}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="profile-info">
-                                <h3>{item.name}</h3>
-                                <div className="profile-details">
-                                    <div className="detail-item">
-                                        <span className="label">이메일</span>
-                                        <span className="value">{item.user?.email}</span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="label">나이</span>
-                                        <span className="value">{item.age}세</span>
-                                    </div>
-                                    <div className="detail-item">
-                                        <span className="label">전화번호</span>
-                                        <span className="value">{item.phone}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
         </div>
     );
 }

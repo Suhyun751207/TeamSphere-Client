@@ -61,7 +61,7 @@
     flex: 1;
 }
 
-.user-info {
+.user-info-dashboard {
     display: flex;
     align-items: center;
     gap: 12px;

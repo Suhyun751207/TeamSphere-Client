@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import WorkspaceServer from "../../api/workspace/workspace";
 import RoomsService from "../../api/user/rooms/rooms";
 import { WorkspaceDashboardData } from "../../interface/WorkspaceDashboard";
-import { WorkspaceMemberCreateRequest } from "../../interface/Workspace";
+import { WorkspaceMemberCreateRequest, ActivityLog, ActivityLogWithUser, ActivityLogsCreate } from "../../interface/Workspace";
 import Footer from "../../components/Footer";
 import {
     Chart as ChartJS,
@@ -57,6 +57,16 @@ function Workspace() {
         role: "MEMBER"
     });
     const [addingMember, setAddingMember] = useState(false);
+
+    // Activity Logs state
+    const [activityLogs, setActivityLogs] = useState<ActivityLogWithUser[]>([]);
+    const [activityLogsLoading, setActivityLogsLoading] = useState(false);
+    const [showActivityLogModal, setShowActivityLogModal] = useState(false);
+    const [newActivityLog, setNewActivityLog] = useState<ActivityLogsCreate>({
+        message: ''
+    });
+    const [addingActivityLog, setAddingActivityLog] = useState(false);
+    const [selectedActivityUser, setSelectedActivityUser] = useState<number | null>(null);
 
     // Calculate weekly attendance data for line chart
     const getWeeklyAttendanceData = useCallback((membersData: any[], workspaceInfo: any): WeeklyAttendanceData[] => {
@@ -174,6 +184,123 @@ function Workspace() {
             setRoomsLoading(false);
         }
     }, [workspaceId]);
+
+    const loadActivityLogs = useCallback(async () => {
+        if (!workspaceId || !workspaceData) return;
+
+        try {
+            setActivityLogsLoading(true);
+            const response = await WorkspaceServer.WorkspaceActivityLogList(Number(workspaceId));
+            const logs = response.data || [];
+
+            // Get member profiles from workspace data
+            const profiles = workspaceData.memberProfiles || [];
+
+            // Fetch user profiles for each activity log
+            const logsWithUsers = logs.map((log: ActivityLog) => {
+                try {
+                    // Find user profile from existing member profiles
+                    const memberProfile = profiles.find((mp: any) => mp.userId === log.userId);
+                    if (memberProfile && memberProfile.profile[0]) {
+                        return {
+                            ...log,
+                            user: {
+                                id: log.userId,
+                                name: memberProfile.profile[0].name,
+                                imagePath: memberProfile.profile[0].imagePath
+                            }
+                        };
+                    }
+                    return {
+                        ...log,
+                        user: {
+                            id: log.userId,
+                            name: `User ${log.userId}`,
+                            imagePath: undefined
+                        }
+                    };
+                } catch (error) {
+                    console.error(`Failed to fetch user profile for userId ${log.userId}:`, error);
+                    return {
+                        ...log,
+                        user: {
+                            id: log.userId,
+                            name: `User ${log.userId}`,
+                            imagePath: undefined
+                        }
+                    };
+                }
+            });
+
+            // Sort logs by createdAt in descending order (newest first)
+            const sortedLogs = logsWithUsers.sort((a: ActivityLogWithUser, b: ActivityLogWithUser) => 
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+            
+            setActivityLogs(sortedLogs);
+        } catch (error) {
+            console.error("Activity logs fetch error:", error);
+        } finally {
+            setActivityLogsLoading(false);
+        }
+    }, [workspaceId, workspaceData]);
+
+    // Load activity logs when workspace data is available
+    useEffect(() => {
+        if (workspaceData) {
+            loadActivityLogs();
+        }
+    }, [workspaceData, loadActivityLogs]);
+
+    const handleAddActivityLog = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!workspaceId || !newActivityLog.message.trim() || addingActivityLog) return;
+
+        try {
+            setAddingActivityLog(true);
+            await WorkspaceServer.WorkspaceActivityLogCreate(Number(workspaceId), newActivityLog);
+
+            // Refresh activity logs
+            await loadActivityLogs();
+
+            // Reset form and close modal
+            setNewActivityLog({ message: '' });
+            setShowActivityLogModal(false);
+
+            alert("활동 로그 추가 완료");
+        } catch (err: any) {
+            console.error('Failed to add activity log:', err);
+            const errorMessage = err.response?.data?.message || '활동 로그 추가에 실패했습니다.';
+            alert(errorMessage);
+        } finally {
+            setAddingActivityLog(false);
+        }
+    };
+
+    const handleUserClick = (userId: number) => {
+        setSelectedActivityUser(selectedActivityUser === userId ? null : userId);
+    };
+
+    const getFilteredActivityLogs = () => {
+        if (selectedActivityUser === null) {
+            return activityLogs;
+        }
+        return activityLogs.filter(log => log.userId === selectedActivityUser);
+    };
+
+    const getUniqueUsers = () => {
+        const uniqueUsers = new Map();
+        activityLogs.forEach(log => {
+            if (!uniqueUsers.has(log.userId)) {
+                uniqueUsers.set(log.userId, {
+                    userId: log.userId,
+                    user: log.user,
+                    logCount: activityLogs.filter(l => l.userId === log.userId).length
+                });
+            }
+        });
+        return Array.from(uniqueUsers.values());
+    };
 
     const createRoom = async () => {
         if (!workspaceId) return;
@@ -505,7 +632,6 @@ function Workspace() {
                             )}
                         </div>
                     </section>
-
                     {/* Members Section */}
                     <section className="members-section card pad">
                         <div className="chart-header">
@@ -553,6 +679,144 @@ function Workspace() {
                                 );
                             })}
                         </div>
+                    </section>
+
+                    {/* Activity Logs Section */}
+                    <section className="activity-logs-section card pad">
+                        <div className="chart-header">
+                            <h3>워크스페이스 활동 로그</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span>총 {activityLogs.length}개</span>
+                                {selectedActivityUser && (
+                                    <button
+                                        onClick={() => setSelectedActivityUser(null)}
+                                        style={{
+                                            padding: '4px 8px',
+                                            backgroundColor: '#f59e0b',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: '500'
+                                        }}
+                                        title="필터 초기화"
+                                    >
+                                        전체 보기
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowActivityLogModal(true)}
+                                    style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#2563eb',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                    title="새 활동 로그 작성"
+                                >
+                                    + 로그 작성
+                                </button>
+                            </div>
+                        </div>
+                        {activityLogsLoading ? (
+                            <div className="loading">활동 로그를 불러오는 중...</div>
+                        ) : activityLogs.length > 0 ? (
+                            <div className="activity-logs-container">
+                                {/* User List */}
+                                <div className="activity-users-list">
+                                    <h4>활동 멤버</h4>
+                                    <div className="users-grid">
+                                        {getUniqueUsers().map((userInfo) => (
+                                            <div
+                                                key={userInfo.userId}
+                                                className={`user-item ${selectedActivityUser === userInfo.userId ? 'selected' : ''}`}
+                                                onClick={() => handleUserClick(userInfo.userId)}
+                                            >
+                                                <div className="user-avatar">
+                                                    {userInfo.user?.imagePath ? (
+                                                        <img src={userInfo.user.imagePath} alt={userInfo.user.name} />
+                                                    ) : (
+                                                        <div className="user-avatar-placeholder">
+                                                            {getInitials(userInfo.user?.name || 'U')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="user-info">
+                                                    <div className="user-name">{userInfo.user?.name || `User ${userInfo.userId}`}</div>
+                                                    <div className="user-log-count">{userInfo.logCount}개 활동</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Activity Logs */}
+                                <div className="activity-logs-list">
+                                    <h4>
+                                        {selectedActivityUser
+                                            ? `${getUniqueUsers().find(u => u.userId === selectedActivityUser)?.user?.name || 'User'}의 활동 로그`
+                                            : '전체 활동 로그'
+                                        }
+                                    </h4>
+                                    {getFilteredActivityLogs().slice(0, 10).map((log, index) => (
+                                        <div key={`${log.userId}-${log.createdAt}-${index}`} className="activity-log-item">
+                                            <div className="activity-log-avatar">
+                                                {log.user?.imagePath ? (
+                                                    <img src={log.user.imagePath} alt={log.user.name} />
+                                                ) : (
+                                                    <div className="activity-log-avatar-placeholder">
+                                                        {getInitials(log.user?.name || 'U')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="activity-log-content">
+                                                <div className="activity-log-header">
+                                                    <span className="activity-log-user">{log.user?.name || `User ${log.userId}`}</span>
+                                                    <span className="activity-log-time">{formatDate(log.createdAt)}</span>
+                                                </div>
+                                                <div className="activity-log-message">{log.message}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {getFilteredActivityLogs().length > 10 && (
+                                        <div className="activity-log-more">
+                                            <span>+ {getFilteredActivityLogs().length - 10}개 더 보기</span>
+                                        </div>
+                                    )}
+                                    {getFilteredActivityLogs().length === 0 && selectedActivityUser && (
+                                        <div className="no-activity-logs">
+                                            <p>이 사용자의 활동 로그가 없습니다.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="no-activity-logs">
+                                <p>활동 로그가 없습니다.</p>
+                                <button
+                                    onClick={() => setShowActivityLogModal(true)}
+                                    style={{
+                                        marginTop: '12px',
+                                        padding: '8px 16px',
+                                        backgroundColor: '#2563eb',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                    title="새 활동 로그 작성"
+                                >
+                                    첫 번째 로그 작성하기
+                                </button>
+                            </div>
+                        )}
                     </section>
 
                     {/* Stats Section */}
@@ -902,6 +1166,91 @@ function Workspace() {
                                         }}
                                     >
                                         {addingMember ? '추가 중...' : '추가'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Activity Log Modal */}
+                {showActivityLogModal && (
+                    <div className="modal-overlay" onClick={() => setShowActivityLogModal(false)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>새 활동 로그 작성</h3>
+                                <button
+                                    className="modal-close"
+                                    onClick={() => setShowActivityLogModal(false)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '20px',
+                                        cursor: 'pointer',
+                                        color: '#666'
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <form onSubmit={handleAddActivityLog}>
+                                <div className="form-group">
+                                    <label htmlFor="activityMessage">활동 내용</label>
+                                    <textarea
+                                        id="activityMessage"
+                                        value={newActivityLog.message}
+                                        onChange={(e) => setNewActivityLog({
+                                            ...newActivityLog,
+                                            message: e.target.value
+                                        })}
+                                        placeholder="활동 내용을 입력하세요..."
+                                        required
+                                        rows={4}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '14px',
+                                            resize: 'vertical',
+                                            minHeight: '80px'
+                                        }}
+                                    />
+                                </div>
+                                <div className="form-actions">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowActivityLogModal(false);
+                                            setNewActivityLog({ message: '' });
+                                        }}
+                                        disabled={addingActivityLog}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            backgroundColor: 'white',
+                                            cursor: addingActivityLog ? 'not-allowed' : 'pointer',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        취소
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={addingActivityLog || !newActivityLog.message.trim()}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            backgroundColor: newActivityLog.message.trim() ? '#28a745' : '#ccc',
+                                            color: 'white',
+                                            cursor: (addingActivityLog || !newActivityLog.message.trim()) ? 'not-allowed' : 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        {addingActivityLog ? '작성 중...' : '작성'}
                                     </button>
                                 </div>
                             </form>

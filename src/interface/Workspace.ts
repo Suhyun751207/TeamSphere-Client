@@ -49,3 +49,24 @@ export interface WorkspaceMemberCreateRequest {
     userId: number;
     role: "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
 }
+
+
+export interface ActivityLogsCreate {
+    message: string;
+}
+
+export interface ActivityLog {
+    userId: number;
+    workspaceId: number;
+    message: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ActivityLogWithUser extends ActivityLog {
+    user?: {
+        id: number;
+        name: string;
+        imagePath?: string;
+    };
+}
