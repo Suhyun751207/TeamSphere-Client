@@ -1005,6 +1005,17 @@ function Workspace() {
                                                 <span>멤버: {teamDetail.members.length}명</span>
                                                 <span>작업: {teamDetail.tasks.length}개</span>
                                             </div>
+                                            <div className="team-actions">
+                                                <button 
+                                                    className="dashboard-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/workspace/${workspaceId}/team/${teamDetail.team.id}/dashboard`);
+                                                    }}
+                                                >
+                                                    대시보드
+                                                </button>
+                                            </div>
                                         </div>
                                     );
                                 })}
