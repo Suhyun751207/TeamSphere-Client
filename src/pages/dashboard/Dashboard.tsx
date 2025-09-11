@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardService from "../../api/dashboard/route";
 import AttendanceService from "../../api/user/Attendance";
 import WorkspaceServer from "../../api/workspace/workspace";
 import RoomsService from "../../api/user/rooms/rooms";
+import AuthServer from "../../api/auth/auth";
 import { DashboardData, CalendarDay, MonthData } from "../../interface/Dashboard";
 import { WorkspaceCreateRequest } from "../../interface/Workspace";
 import Footer from "../../components/Footer";
@@ -30,6 +31,8 @@ export default function Dashboard() {
     const [workspaceSortBy, setWorkspaceSortBy] = useState<'latest' | 'alphabetical' | 'active'>('latest');
     const [roomsSortBy, setRoomsSortBy] = useState<'latest' | 'alphabetical' | 'active'>('latest');
     const [showAttendanceReminder, setShowAttendanceReminder] = useState(false);
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         DashboardService.Getdashboard().then((res) => {
@@ -42,6 +45,20 @@ export default function Dashboard() {
 
         // Check attendance status
         checkAttendanceStatus();
+    }, []);
+
+    // Handle click outside dropdown to close it
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowUserDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     const checkAttendanceStatus = async () => {
@@ -209,6 +226,21 @@ export default function Dashboard() {
             ...prev,
             [field]: value
         }));
+    };
+
+    const handleLogout = async () => {
+        try {
+            await AuthServer.Logout();
+            navigate("/auth/login");
+        } catch (error) {
+            console.error("Logout failed:", error);
+            // Even if logout API fails, redirect to login page
+            navigate("/auth/login");
+        }
+    };
+
+    const toggleUserDropdown = () => {
+        setShowUserDropdown(!showUserDropdown);
     };
 
     // Flatten arrays for easier processing
@@ -394,10 +426,63 @@ export default function Dashboard() {
                 <div className="topbar">
                     <div className="title">Dashboard</div>
                     <div className="spacer"></div>
-                    <div className="user-info">
-                        <div className="avatar" title={profile.name}>
+                    <div className="user-info" ref={dropdownRef}>
+                        <div className="avatar" title={profile.name} onClick={toggleUserDropdown}>
                             {getInitials(profile.name)}
                         </div>
+                        {showUserDropdown && (
+                            <div className="user-dropdown">
+                                <div className="dropdown-header">
+                                    <div className="dropdown-avatar">
+                                        {profile.imagePath ? (
+                                            <img src={profile.imagePath} alt={profile.name} />
+                                        ) : (
+                                            <div className="dropdown-avatar-placeholder">
+                                                {getInitials(profile.name)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="dropdown-user-info">
+                                        <div className="dropdown-name">{profile.name}</div>
+                                        <div className="dropdown-email">{user.email}</div>
+                                    </div>
+                                </div>
+                                <div className="dropdown-divider"></div>
+                                <div className="dropdown-menu">
+                                    <button 
+                                        className="dropdown-item"
+                                        onClick={() => {
+                                            navigate('/profile');
+                                            setShowUserDropdown(false);
+                                        }}
+                                    >
+                                        <span className="dropdown-icon">⚙️</span>
+                                        프로필 설정
+                                    </button>
+                                    <button 
+                                        className="dropdown-item"
+                                        onClick={() => {
+                                            navigate('/user/profile');
+                                            setShowUserDropdown(false);
+                                        }}
+                                    >
+                                        <span className="dropdown-icon">👤</span>
+                                        내 정보
+                                    </button>
+                                    <div className="dropdown-divider"></div>
+                                    <button 
+                                        className="dropdown-item logout-item"
+                                        onClick={() => {
+                                            handleLogout();
+                                            setShowUserDropdown(false);
+                                        }}
+                                    >
+                                        <span className="dropdown-icon">🚪</span>
+                                        로그아웃
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
