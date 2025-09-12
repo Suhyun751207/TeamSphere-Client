@@ -10,6 +10,8 @@ import Workspace from "../pages/workspace/workspace";
 import WorkspaceRooms from "../pages/workspace/room/WorkspaceRooms";
 import WorkspaceRoomDetail from "../pages/workspace/room/WorkspaceRoomDetail";
 import TeamDashboard from "../pages/workspace/team/teamdashboard";
+import TeamRooms from "../pages/workspace/team/room/TeamRooms";
+import TeamRoomDetail from "../pages/workspace/team/room/TeamRoomDetail";
 
 export default function Router() {
     return (
@@ -30,6 +32,9 @@ export default function Router() {
                     <Route path=":workspaceId/team/:teamId/dashboard" element={<TeamDashboard />} />
                     <Route path=":workspaceId/room" element={<WorkspaceRooms />}>
                         <Route path=":roomId" element={<WorkspaceRoomDetail />} />
+                    </Route>
+                    <Route path=":workspaceId/team/:teamId/room" element={<TeamRooms />}>
+                        <Route path=":roomId" element={<TeamRoomDetail />} />
                     </Route>
                 </Route>
 

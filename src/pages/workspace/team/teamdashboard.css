@@ -913,3 +913,137 @@
         gap: 12px;
     }
 }
+
+/* Chat Content Styles */
+.team-dashboard-container .chat-content {
+    padding: var(--spacing);
+}
+
+.team-dashboard-container .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing);
+}
+
+.team-dashboard-container .chat-header h3 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* Create Room Form */
+.team-dashboard-container .create-room-form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--spacing);
+    margin-bottom: var(--spacing);
+    box-shadow: var(--shadow-sm);
+}
+
+.team-dashboard-container .form-group {
+    margin-bottom: 16px;
+}
+
+.team-dashboard-container .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.team-dashboard-container .form-group input,
+.team-dashboard-container .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--ring);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.team-dashboard-container .form-group input:focus,
+.team-dashboard-container .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.team-dashboard-container .form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+/* Rooms List */
+.team-dashboard-container .rooms-list {
+    display: grid;
+    gap: 16px;
+}
+
+.team-dashboard-container .room-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+}
+
+.team-dashboard-container .room-item:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+}
+
+.team-dashboard-container .room-info {
+    margin-bottom: 12px;
+}
+
+.team-dashboard-container .room-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.team-dashboard-container .room-description {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.team-dashboard-container .room-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.team-dashboard-container .room-last-message {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.team-dashboard-container .last-message-content {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.team-dashboard-container .last-message-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.team-dashboard-container .last-message-author {
+    font-weight: 500;
+}

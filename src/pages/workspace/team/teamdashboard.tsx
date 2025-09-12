@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TeamAPI from "../../../api/workspace/team";
+import TeamMessageServer from "../../../api/workspace/team/teamMessage";
 import './teamdashboard.css';
 
 interface Profile {
@@ -113,6 +114,27 @@ interface Summary {
     activeMembers: number;
 }
 
+interface Room {
+    id: string;
+    name: string;
+    description?: string;
+    createdAt: string;
+    updatedAt: string;
+    lastMessage?: {
+        content: string;
+        createdAt: string;
+        profile: {
+            name: string;
+        };
+    };
+    members: Array<{
+        userId: number;
+        profile: {
+            name: string;
+        };
+    }>;
+}
+
 interface TeamDashboardData {
     team: Team[];
     members: Member[];
@@ -130,8 +152,13 @@ export default function TeamDashboard() {
     const [dashboardData, setDashboardData] = useState<TeamDashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'tasks'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'tasks' | 'chat'>('overview');
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [roomsLoading, setRoomsLoading] = useState(false);
+    const [showCreateRoom, setShowCreateRoom] = useState(false);
+    const [newRoomName, setNewRoomName] = useState('');
+    const [newRoomDescription, setNewRoomDescription] = useState('');
 
     useEffect(() => {
         if (workspaceId && teamId) {
@@ -139,6 +166,12 @@ export default function TeamDashboard() {
             fetchCurrentUser();
         }
     }, [workspaceId, teamId]);
+
+    useEffect(() => {
+        if (activeTab === 'chat' && workspaceId && teamId) {
+            fetchRooms();
+        }
+    }, [activeTab, workspaceId, teamId]);
 
     const fetchTeamDashboard = async () => {
         try {
@@ -164,6 +197,40 @@ export default function TeamDashboard() {
         } catch (err) {
             console.error('Failed to fetch current user:', err);
         }
+    };
+
+    const fetchRooms = async () => {
+        try {
+            setRoomsLoading(true);
+            const response = await TeamMessageServer.TeamRoomList(Number(workspaceId), Number(teamId));
+            setRooms(response.data);
+        } catch (err) {
+            console.error('Failed to fetch team rooms:', err);
+        } finally {
+            setRoomsLoading(false);
+        }
+    };
+
+    const handleCreateRoom = async () => {
+        if (!newRoomName.trim()) return;
+
+        try {
+            await TeamMessageServer.TeamRoomCreate(Number(workspaceId), Number(teamId), {
+                title: newRoomName,
+                description: newRoomDescription
+            });
+            setNewRoomName('');
+            setNewRoomDescription('');
+            setShowCreateRoom(false);
+            fetchRooms();
+        } catch (err) {
+            console.error('Failed to create room:', err);
+            alert('채팅방 생성에 실패했습니다.');
+        }
+    };
+
+    const handleRoomClick = (roomId: string) => {
+        navigate(`/workspace/${workspaceId}/team/${teamId}/room/${roomId}`);
     };
 
     const formatDate = (dateString: string) => {
@@ -293,6 +360,12 @@ export default function TeamDashboard() {
                     onClick={() => setActiveTab('tasks')}
                 >
                     작업
+                </button>
+                <button 
+                    className={`tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('chat')}
+                >
+                    채팅
                 </button>
             </div>
 
@@ -564,6 +637,109 @@ export default function TeamDashboard() {
                             <div className="empty-state">
                                 <span className="empty-icon">📋</span>
                                 <p>등록된 작업이 없습니다.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'chat' && (
+                    <div className="chat-content">
+                        <div className="chat-header">
+                            <h3>팀 채팅방</h3>
+                            <button 
+                                className="action-btn primary"
+                                onClick={() => setShowCreateRoom(true)}
+                            >
+                                + 채팅방 생성
+                            </button>
+                        </div>
+
+                        {showCreateRoom && (
+                            <div className="create-room-form">
+                                <div className="form-group">
+                                    <label>채팅방 이름</label>
+                                    <input
+                                        type="text"
+                                        value={newRoomName}
+                                        onChange={(e) => setNewRoomName(e.target.value)}
+                                        placeholder="채팅방 이름을 입력하세요"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>설명 (선택사항)</label>
+                                    <textarea
+                                        value={newRoomDescription}
+                                        onChange={(e) => setNewRoomDescription(e.target.value)}
+                                        placeholder="채팅방 설명을 입력하세요"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="form-actions">
+                                    <button 
+                                        className="action-btn secondary"
+                                        onClick={() => setShowCreateRoom(false)}
+                                    >
+                                        취소
+                                    </button>
+                                    <button 
+                                        className="action-btn primary"
+                                        onClick={handleCreateRoom}
+                                    >
+                                        생성
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {roomsLoading ? (
+                            <div className="loading">채팅방 목록을 불러오는 중...</div>
+                        ) : (
+                            <div className="rooms-list">
+                                {rooms.length > 0 ? (
+                                    rooms.map((room) => (
+                                        <div 
+                                            key={room.id} 
+                                            className="room-item"
+                                            onClick={() => handleRoomClick(room.id)}
+                                        >
+                                            <div className="room-info">
+                                                <div className="room-name">{room.name}</div>
+                                                {room.description && (
+                                                    <div className="room-description">{room.description}</div>
+                                                )}
+                                                <div className="room-meta">
+                                                    <span className="room-members">
+                                                        👥 {room.members?.length || 0}명
+                                                    </span>
+                                                    <span className="room-date">
+                                                        생성: {formatDate(room.createdAt)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {room.lastMessage && (
+                                                <div className="room-last-message">
+                                                    <div className="last-message-content">
+                                                        {room.lastMessage.content}
+                                                    </div>
+                                                    <div className="last-message-info">
+                                                        <span className="last-message-author">
+                                                            {room.lastMessage.profile.name}
+                                                        </span>
+                                                        <span className="last-message-time">
+                                                            {formatDate(room.lastMessage.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="empty-state">
+                                        <span className="empty-icon">💬</span>
+                                        <p>생성된 채팅방이 없습니다.</p>
+                                        <p>새 채팅방을 만들어 팀원들과 소통해보세요!</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
