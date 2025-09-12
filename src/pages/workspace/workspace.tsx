@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import WorkspaceServer from "../../api/workspace/workspace";
 import RoomsService from "../../api/user/rooms/rooms";
 import TeamAPI from "../../api/workspace/team";
+import TeamMemberAPI from "../../api/workspace/team/teamMember";
 import { WorkspaceDashboardData } from "../../interface/WorkspaceDashboard";
-import { WorkspaceMemberCreateRequest, ActivityLog, ActivityLogWithUser, ActivityLogsCreate, TeamCreateRequest } from "../../interface/Workspace";
+import { WorkspaceMemberCreateRequest, ActivityLog, ActivityLogWithUser, ActivityLogsCreate, TeamCreateRequest, TeamMemberCreateRequest } from "../../interface/Workspace";
 import Footer from "../../components/Footer";
 import {
     Chart as ChartJS,
@@ -76,6 +77,23 @@ function Workspace() {
     });
     const [creatingTeam, setCreatingTeam] = useState(false);
 
+    // Team member management state
+    const [showAddTeamMemberModal, setShowAddTeamMemberModal] = useState(false);
+    const [newTeamMemberData, setNewTeamMemberData] = useState<TeamMemberCreateRequest>({
+        memberId: 0,
+        role: "MEMBER"
+    });
+    const [addingTeamMember, setAddingTeamMember] = useState(false);
+    const [teamMembers, setTeamMembers] = useState<any[]>([]);
+    const [teamMembersLoading, setTeamMembersLoading] = useState(false);
+    const [currentUserWorkspaceInfo, setCurrentUserWorkspaceInfo] = useState<any>(null);
+
+    // Role management state
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [selectedMemberForRole, setSelectedMemberForRole] = useState<any>(null);
+    const [newRole, setNewRole] = useState<string>('');
+    const [updatingRole, setUpdatingRole] = useState(false);
+
     // Calculate weekly attendance data for line chart
     const getWeeklyAttendanceData = useCallback((membersData: any[], workspaceInfo: any): WeeklyAttendanceData[] => {
         if (!workspaceInfo || !membersData || membersData.length === 0) {
@@ -131,22 +149,71 @@ function Workspace() {
         return weekData;
     }, []);
 
+    // Check if current user can manage roles (Admin or Manager)
+    const canManageRoles = useCallback(() => {
+        if (!currentUserWorkspaceInfo) {
+            return false;
+        }
+        const userRole = currentUserWorkspaceInfo.role;
+        return userRole === 'Admin' || userRole === 'Manager';
+    }, [currentUserWorkspaceInfo]);
+
+    // Handle opening role modal
+    const handleOpenRoleModal = useCallback((member: any) => {
+        // Prevent admin from changing their own role
+        if (currentUserWorkspaceInfo?.role === 'Admin' && member.userId === currentUserWorkspaceInfo.id) {
+            alert('관리자는 본인의 역할을 변경할 수 없습니다.');
+            return;
+        }
+
+        setSelectedMemberForRole(member);
+        setNewRole(member.role);
+        setShowRoleModal(true);
+    }, [currentUserWorkspaceInfo]);
+
+    // Handle role update
+    const handleUpdateRole = useCallback(async () => {
+        if (!selectedMemberForRole || !workspaceId || !newRole) return;
+
+        try {
+            setUpdatingRole(true);
+            await WorkspaceServer.WorkspaceMemberUpdate(
+                Number(workspaceId),
+                { userId: selectedMemberForRole.userId, role: newRole as "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER" }
+            );
+
+            // Refresh workspace data
+            const workspaceRes = await WorkspaceServer.WorkspaceList(Number(workspaceId));
+            setWorkspaceData(workspaceRes.data);
+
+            setShowRoleModal(false);
+            setSelectedMemberForRole(null);
+            setNewRole('');
+
+            alert('역할이 성공적으로 변경되었습니다.');
+        } catch (error) {
+            console.error('Failed to update role:', error);
+            alert('역할 변경에 실패했습니다.');
+        } finally {
+            setUpdatingRole(false);
+        }
+    }, [selectedMemberForRole, workspaceId, newRole, workspaceData]);
+
     useEffect(() => {
         if (workspaceId) {
-            WorkspaceServer.WorkspaceList(Number(workspaceId)).then((res) => {
-                setWorkspaceData(res.data);
-                setError(null);
+            Promise.all([
+                WorkspaceServer.WorkspaceList(Number(workspaceId)),
+                TeamMemberAPI.getWorkspaceMe(Number(workspaceId))
+            ]).then(([workspaceRes, userRes]) => {
+                setWorkspaceData(workspaceRes.data);
+                setCurrentUserWorkspaceInfo(userRes.data[0]);
                 setLoading(false);
-            }).catch((error) => {
-                console.error("Workspace data fetch error:", error);
-                setError("워크스페이스 데이터를 불러오는데 실패했습니다.");
+            }).catch((err) => {
+                console.error('Failed to load workspace data:', err);
+                setError('워크스페이스 데이터를 불러오는데 실패했습니다.');
                 setLoading(false);
             });
-
-            // Load workspace rooms
-            loadWorkspaceRooms();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [workspaceId]);
 
     const loadWorkspaceRooms = useCallback(async () => {
@@ -259,6 +326,15 @@ function Workspace() {
             loadActivityLogs();
         }
     }, [workspaceData, loadActivityLogs]);
+
+    // Load team members when a team is selected
+    useEffect(() => {
+        if (selectedTeam) {
+            loadTeamMembers(selectedTeam.team.id);
+        } else {
+            setTeamMembers([]);
+        }
+    }, [selectedTeam]);
 
     const handleAddActivityLog = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -378,15 +454,15 @@ function Workspace() {
         try {
             setCreatingTeam(true);
             await TeamAPI.createWorkspaceTeam(Number(workspaceId), newTeamData);
-            
+
             // Refresh workspace data to show new team
             const res = await WorkspaceServer.WorkspaceList(Number(workspaceId));
             setWorkspaceData(res.data);
-            
+
             // Reset form and close modal
             setNewTeamData({ name: '' });
             setShowCreateTeamModal(false);
-            
+
             alert("팀 생성 완료");
         } catch (err: any) {
             console.error('Failed to create team:', err);
@@ -399,6 +475,77 @@ function Workspace() {
 
     const handleTeamFormChange = (field: keyof TeamCreateRequest, value: string) => {
         setNewTeamData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    // Team member management functions
+    const loadTeamMembers = async (teamId: number) => {
+        if (!workspaceId) return;
+
+        try {
+            setTeamMembersLoading(true);
+            const res = await TeamMemberAPI.getTeamMembers(Number(workspaceId), teamId);
+            setTeamMembers(res.data);
+        } catch (err: any) {
+            console.error('Failed to load team members:', err);
+        } finally {
+            setTeamMembersLoading(false);
+        }
+    };
+
+    const handleAddTeamMember = async () => {
+        if (!workspaceId || !selectedTeam || !newTeamMemberData.memberId) {
+            alert('멤버를 선택해주세요.');
+            return;
+        }
+
+        try {
+            setAddingTeamMember(true);
+            await TeamMemberAPI.addTeamMember(Number(workspaceId), selectedTeam.team.id, newTeamMemberData);
+
+            await loadTeamMembers(selectedTeam.team.id);
+
+            // Refresh workspace data to update team member count
+            const res = await WorkspaceServer.WorkspaceList(Number(workspaceId));
+            setWorkspaceData(res.data);
+
+            // Reset form and close modal
+            setNewTeamMemberData({ memberId: 0, role: "MEMBER" });
+            setShowAddTeamMemberModal(false);
+
+            alert("팀 멤버 추가 완료");
+        } catch (err: any) {
+            console.error('Failed to add team member:', err);
+            const errorMessage = err.response?.data?.message || '팀 멤버 추가에 실패했습니다.';
+            alert(errorMessage);
+        } finally {
+            setAddingTeamMember(false);
+        }
+    };
+
+    const handleRemoveTeamMember = async (memberId: number) => {
+        if (!workspaceId || !selectedTeam) return;
+
+        try {
+            await TeamMemberAPI.removeTeamMember(Number(workspaceId), selectedTeam.team.id, memberId);
+            await loadTeamMembers(selectedTeam.team.id);
+
+            // Refresh workspace data to update team member count
+            const res = await WorkspaceServer.WorkspaceList(Number(workspaceId));
+            setWorkspaceData(res.data);
+
+            alert("팀 멤버 제거 완료");
+        } catch (err: any) {
+            console.error('Failed to remove team member:', err);
+            const errorMessage = err.response?.data?.message || '팀 멤버 제거에 실패했습니다.';
+            alert(errorMessage);
+        }
+    };
+
+    const handleTeamMemberFormChange = (field: keyof TeamMemberCreateRequest, value: string | number) => {
+        setNewTeamMemberData(prev => ({
             ...prev,
             [field]: value
         }));
@@ -525,6 +672,32 @@ function Workspace() {
     const teamDetails = workspaceData.teamDetails || [];
     const workspaceTasks = workspaceData.workspaceTasks || [];
 
+    // Filter teams based on user role
+    const getFilteredTeams = () => {
+        if (!currentUserWorkspaceInfo) return teamDetails;
+
+        const userRole = currentUserWorkspaceInfo.role;
+        const userId = currentUserWorkspaceInfo.id;
+
+        // Admin and Manager can see all teams
+        if (userRole === 'ADMIN' || userRole === 'Manager') {
+            return teamDetails;
+        }
+
+        // Member can only see teams they belong to
+        if (userRole === 'MEMBER' || userRole === 'Member') {
+            return teamDetails.filter(teamDetail => {
+                return teamDetail.members.some((member: any) =>
+                    member.memberId === userId
+                );
+            });
+        }
+
+        return teamDetails;
+    };
+
+    const filteredTeamDetails = getFilteredTeams();
+
     // Calculate today's attendance
     const today = new Date().toDateString();
     const todayAttendance = memberAttendance.filter(member =>
@@ -541,6 +714,9 @@ function Workspace() {
     };
 
     const getInitials = (name: string) => {
+        if (!name || typeof name !== 'string') {
+            return 'U';
+        }
         return name.split(' ').map(n => n[0]).join('').toUpperCase();
     };
 
@@ -701,7 +877,16 @@ function Workspace() {
                             </button>
                         </div>
                         <div className="members-list">
-                            {members.map((member) => {
+                            {members.slice().sort((a, b) => {
+                                console.log(a, b);
+                                const profileA = getMemberProfile(a.userId);
+                                const profileB = getMemberProfile(b.userId);
+
+                                const nameA = profileA?.name || `User ${a.userId}`;
+                                const nameB = profileB?.name || `User ${b.userId}`;
+
+                                return nameB.localeCompare(nameA);
+                            }).map((member) => {
                                 const profile = getMemberProfile(member.userId);
                                 const attendedToday = isMemberAttendedToday(member.userId);
 
@@ -725,6 +910,24 @@ function Workspace() {
                                         <div className={`attendance-status ${attendedToday ? 'attended' : 'not-attended'}`}>
                                             {attendedToday ? '출석' : '미출석'}
                                         </div>
+                                        {canManageRoles() && (
+                                            <button
+                                                onClick={() => handleOpenRoleModal(member)}
+                                                className="dashboard-btn"
+                                                title="역할 설정"
+                                                style={{
+                                                    marginLeft: '8px',
+                                                    padding: '6px',
+                                                    fontSize: '14px',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '4px',
+                                                    background: 'white',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                ⚙️
+                                            </button>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -976,8 +1179,8 @@ function Workspace() {
                         <div className="chart-header">
                             <h3>팀 목록</h3>
                             <div className="header-actions">
-                                <span>총 {teamDetails.length}개</span>
-                                <button 
+                                <span>총 {filteredTeamDetails.length}개</span>
+                                <button
                                     className="add-team-btn"
                                     onClick={() => setShowCreateTeamModal(true)}
                                     title="새 팀 생성"
@@ -986,9 +1189,9 @@ function Workspace() {
                                 </button>
                             </div>
                         </div>
-                        {teamDetails.length > 0 ? (
+                        {filteredTeamDetails.length > 0 ? (
                             <div className="teams-grid">
-                                {teamDetails.map((teamDetail) => {
+                                {filteredTeamDetails.map((teamDetail) => {
                                     const manager = getMemberProfile(teamDetail.team.managerId);
                                     const isSelected = selectedTeam?.team.id === teamDetail.team.id;
                                     return (
@@ -997,24 +1200,28 @@ function Workspace() {
                                             className={`team-card ${isSelected ? 'selected' : ''}`}
                                             onClick={() => handleTeamClick(teamDetail)}
                                         >
-                                            <div className="team-name">{teamDetail.team.name}</div>
-                                            <div className="team-manager">
-                                                관리자: {manager?.name || `User ${teamDetail.team.managerId}`}
-                                            </div>
-                                            <div className="team-stats">
-                                                <span>멤버: {teamDetail.members.length}명</span>
-                                                <span>작업: {teamDetail.tasks.length}개</span>
-                                            </div>
-                                            <div className="team-actions">
-                                                <button 
-                                                    className="dashboard-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        navigate(`/workspace/${workspaceId}/team/${teamDetail.team.id}/dashboard`);
-                                                    }}
-                                                >
-                                                    대시보드
-                                                </button>
+                                            <div className="team-content-card-body">
+                                                <div className="team-content-card-header">
+                                                    <div className="team-name">{teamDetail.team.name}</div>
+                                                    <div className="team-manager">
+                                                        관리자: {manager?.name || `User ${teamDetail.team.managerId}`}
+                                                    </div>
+                                                    <div className="team-stats">
+                                                        <span>멤버: {teamDetail.members.length}명</span>
+                                                        <span>작업: {teamDetail.tasks.length}개</span>
+                                                    </div>
+                                                </div>
+                                                <div className="team-actions">
+                                                    <button
+                                                        className="dashboard-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/workspace/${workspaceId}/team/${teamDetail.team.id}/dashboard`);
+                                                        }}
+                                                    >
+                                                        대시보드
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -1031,14 +1238,27 @@ function Workspace() {
                     <section className="team-members-section card pad">
                         <div className="chart-header">
                             <h3>팀 멤버</h3>
-                            <span>{selectedTeam ? `총 ${selectedTeam.members.length}명` : '팀을 선택해주세요'}</span>
+                            <div className="header-actions">
+                                <span>{selectedTeam ? `총 ${teamMembers.length}명` : '팀을 선택해주세요'}</span>
+                                {selectedTeam && (
+                                    <button
+                                        className="add-member-btn"
+                                        onClick={() => setShowAddTeamMemberModal(true)}
+                                        title="팀 멤버 추가"
+                                    >
+                                        +
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         {selectedTeam ? (
-                            selectedTeam.members.length > 0 ? (
+                            teamMembersLoading ? (
+                                <div className="loading">팀 멤버를 불러오는 중...</div>
+                            ) : teamMembers.length > 0 ? (
                                 <div className="team-members-list">
-                                    {selectedTeam.members.map((teamMember: any) => {
-                                        const workspaceMember = members.find(m => m.id === teamMember.memberId);
-                                        const profile = workspaceMember ? getMemberProfile(workspaceMember.userId) : null;
+                                    {teamMembers.map((teamMember: any) => {
+                                        const profile = teamMember.profile;
+                                        const workspaceMember = teamMember.workspaceMember;
                                         const taskCount = getTasksForMember(teamMember.id).length;
                                         const isSelected = selectedMember?.id === teamMember.id;
 
@@ -1049,16 +1269,38 @@ function Workspace() {
                                                 onClick={() => handleMemberClick(teamMember)}
                                             >
                                                 <div className="member-avatar">
-                                                    {profile ? getInitials(profile.name) : 'U'}
+                                                    {profile?.[0]?.imagePath ? (
+                                                        <img
+                                                            src={profile[0].imagePath}
+                                                            alt={profile[0].name || 'User'}
+                                                            className="avatar-image"
+                                                        />
+                                                    ) : (
+                                                        <div className="avatar-placeholder">
+                                                            {profile?.[0]?.name ? getInitials(profile[0].name) : 'U'}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="member-info">
                                                     <div className="member-name">
-                                                        {profile?.name || `User ${workspaceMember?.userId}`}
+                                                        {profile?.[0]?.name || `User ${workspaceMember?.userId}`}
                                                     </div>
                                                     <div className="member-role">{teamMember.role}</div>
                                                 </div>
-                                                <div className="member-task-count">
-                                                    작업 {taskCount}개
+                                                <div className="member-actions">
+                                                    <span className="member-task-count">
+                                                        작업 {taskCount}개
+                                                    </span>
+                                                    <button
+                                                        className="remove-member-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveTeamMember(teamMember.id);
+                                                        }}
+                                                        title="팀에서 제거"
+                                                    >
+                                                        ×
+                                                    </button>
                                                 </div>
                                             </div>
                                         );
@@ -1067,6 +1309,12 @@ function Workspace() {
                             ) : (
                                 <div className="no-members">
                                     <p>팀에 멤버가 없습니다.</p>
+                                    <button
+                                        className="add-first-member-btn"
+                                        onClick={() => setShowAddTeamMemberModal(true)}
+                                    >
+                                        첫 번째 멤버 추가하기
+                                    </button>
                                 </div>
                             )
                         ) : (
@@ -1411,6 +1659,216 @@ function Workspace() {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Team Member Add Modal */}
+                {showAddTeamMemberModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h3>팀 멤버 추가</h3>
+                                <button
+                                    type="button"
+                                    className="modal-close"
+                                    onClick={() => {
+                                        setShowAddTeamMemberModal(false);
+                                        setNewTeamMemberData({ memberId: 0, role: "MEMBER" });
+                                    }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '20px',
+                                        cursor: 'pointer',
+                                        color: '#666'
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                handleAddTeamMember();
+                            }}>
+                                <div className="form-group">
+                                    <label htmlFor="memberId">워크스페이스 멤버</label>
+                                    <select
+                                        id="memberId"
+                                        value={newTeamMemberData.memberId}
+                                        onChange={(e) => handleTeamMemberFormChange('memberId', Number(e.target.value))}
+                                        required
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        <option value={0}>멤버를 선택하세요</option>
+                                        {members
+                                            .filter(member => !teamMembers.some(tm => tm.memberId === member.id))
+                                            .map(member => {
+                                                const profile = getMemberProfile(member.userId);
+                                                return (
+                                                    <option key={member.id} value={member.id}>
+                                                        {profile?.name || `User ${member.userId}`} ({member.role})
+                                                    </option>
+                                                );
+                                            })
+                                        }
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="memberRole">팀 역할</label>
+                                    <select
+                                        id="memberRole"
+                                        value={newTeamMemberData.role}
+                                        onChange={(e) => handleTeamMemberFormChange('role', e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        <option value="MEMBER">Member</option>
+                                        <option value="MANAGER">Manager</option>
+                                        <option value="ADMIN">Admin</option>
+                                        <option value="VIEWER">Viewer</option>
+                                    </select>
+                                </div>
+                                <div className="form-actions">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowAddTeamMemberModal(false);
+                                            setNewTeamMemberData({ memberId: 0, role: "MEMBER" });
+                                        }}
+                                        disabled={addingTeamMember}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            backgroundColor: 'white',
+                                            cursor: addingTeamMember ? 'not-allowed' : 'pointer',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        취소
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={addingTeamMember || !newTeamMemberData.memberId}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            backgroundColor: newTeamMemberData.memberId ? '#28a745' : '#ccc',
+                                            color: 'white',
+                                            cursor: (addingTeamMember || !newTeamMemberData.memberId) ? 'not-allowed' : 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500'
+                                        }}
+                                    >
+                                        {addingTeamMember ? '추가 중...' : '추가'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Role Management Modal */}
+                {showRoleModal && selectedMemberForRole && (
+                    <div className="modal-overlay">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h3>역할 변경</h3>
+                                <button
+                                    type="button"
+                                    className="modal-close"
+                                    onClick={() => {
+                                        setShowRoleModal(false);
+                                        setSelectedMemberForRole(null);
+                                        setNewRole('');
+                                    }}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '20px',
+                                        cursor: 'pointer',
+                                        color: '#666'
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                            <div style={{ padding: '20px 0' }}>
+                                <p style={{ marginBottom: '15px', fontSize: '14px', color: '#666' }}>
+                                    <strong>{getMemberProfile(selectedMemberForRole.userId)?.name || `User ${selectedMemberForRole.userId}`}</strong>의 역할을 변경합니다.
+                                </p>
+                                <div className="form-group">
+                                    <label htmlFor="newRole">새 역할</label>
+                                    <select
+                                        id="newRole"
+                                        value={newRole}
+                                        onChange={(e) => setNewRole(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '14px'
+                                        }}
+                                    >
+                                        <option value="ADMIN">관리자 (ADMIN)</option>
+                                        <option value="MANAGER">매니저 (MANAGER)</option>
+                                        <option value="MEMBER">멤버 (MEMBER)</option>
+                                        <option value="VIEWER">뷰어 (VIEWER)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="modal-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowRoleModal(false);
+                                        setSelectedMemberForRole(null);
+                                        setNewRole('');
+                                    }}
+                                    disabled={updatingRole}
+                                    style={{
+                                        padding: '8px 16px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '4px',
+                                        backgroundColor: 'white',
+                                        cursor: updatingRole ? 'not-allowed' : 'pointer',
+                                        fontSize: '14px'
+                                    }}
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleUpdateRole}
+                                    disabled={updatingRole || !newRole || newRole === selectedMemberForRole.role}
+                                    style={{
+                                        padding: '8px 16px',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        backgroundColor: (updatingRole || !newRole || newRole === selectedMemberForRole.role) ? '#ccc' : '#28a745',
+                                        color: 'white',
+                                        cursor: (updatingRole || !newRole || newRole === selectedMemberForRole.role) ? 'not-allowed' : 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    {updatingRole ? '변경 중...' : '변경'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

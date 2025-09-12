@@ -77,6 +77,10 @@ async function WorkspaceRoomInfo(workspaceId: number, roomId: number) {
     return await api.get(`/workspace/${workspaceId}/message/${roomId}/info`);
 }
 
+//워크스페이스 멤버 업데이트
+async function WorkspaceMemberUpdate(workspaceId: number, data: WorkspaceMemberCreateRequest) {
+    return await api.patch(`/workspace/${workspaceId}/members`, data);
+}
 
 const WorkspaceServer = {
     WorkspaceList,
@@ -91,6 +95,7 @@ const WorkspaceServer = {
     WorkspaceRoomLastMessageUpdate,
     WorkspaceRoomMemberAdd,
     WorkspaceMemberAdd,
+    WorkspaceMemberUpdate,
     WorkspaceActivityLogList,
     WorkspaceActivityLogCreate,
     WorkspaceRoomInfo

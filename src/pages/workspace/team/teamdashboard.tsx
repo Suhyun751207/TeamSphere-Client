@@ -131,10 +131,12 @@ export default function TeamDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'tasks'>('overview');
+    const [currentUser, setCurrentUser] = useState<any>(null);
 
     useEffect(() => {
         if (workspaceId && teamId) {
             fetchTeamDashboard();
+            fetchCurrentUser();
         }
     }, [workspaceId, teamId]);
 
@@ -149,6 +151,18 @@ export default function TeamDashboard() {
             setError('팀 대시보드 데이터를 불러오는데 실패했습니다.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchCurrentUser = async () => {
+        try {
+            // localStorage에서 사용자 정보 가져오기
+            const userInfo = localStorage.getItem('user');
+            if (userInfo) {
+                setCurrentUser(JSON.parse(userInfo));
+            }
+        } catch (err) {
+            console.error('Failed to fetch current user:', err);
         }
     };
 
@@ -371,27 +385,27 @@ export default function TeamDashboard() {
                                         </div>
                                     </div>
                                     <div className="members-overview">
-                                        {members.map((member) => (
+                                        {members && members.length > 0 ? members.map((member) => (
                                             <div 
                                                 key={member.memberId} 
                                                 className="member-card"
                                                 onClick={() => handleMemberClick(member.memberId)}
                                             >
                                                 <div className="member-avatar">
-                                                    {member.memberInfo.profile[0]?.imagePath ? (
+                                                    {member.memberInfo?.profile?.[0]?.imagePath ? (
                                                         <img 
                                                             src={member.memberInfo.profile[0].imagePath} 
                                                             alt={member.memberInfo.profile[0].name}
                                                         />
                                                     ) : (
                                                         <div className="avatar-placeholder">
-                                                            {getInitials(member.memberInfo.profile[0]?.name || 'U')}
+                                                            {getInitials(member.memberInfo?.profile?.[0]?.name || 'U')}
                                                         </div>
                                                     )}
                                                 </div>
                                                 <div className="member-info">
                                                     <div className="member-name">
-                                                        {member.memberInfo.profile[0]?.name || '이름 없음'}
+                                                        {member.memberInfo?.profile?.[0]?.name || '이름 없음'}
                                                     </div>
                                                     <div className="member-role">
                                                         {member.memberInfo.role}
@@ -401,7 +415,11 @@ export default function TeamDashboard() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
+                                        )) : (
+                                            <div className="no-members">
+                                                <p>팀 멤버가 없습니다.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </section>
 
@@ -444,7 +462,7 @@ export default function TeamDashboard() {
                 {activeTab === 'members' && (
                     <div className="members-content">
                         <div className="members-grid">
-                            {members.map((member) => (
+                            {members && members.length > 0 ? members.map((member) => (
                                 <div 
                                     key={member.memberId} 
                                     className="member-detail-card"
@@ -452,20 +470,20 @@ export default function TeamDashboard() {
                                 >
                                     <div className="member-header">
                                         <div className="member-avatar-large">
-                                            {member.memberInfo.profile[0]?.imagePath ? (
+                                            {member.memberInfo?.profile?.[0]?.imagePath ? (
                                                 <img 
                                                     src={member.memberInfo.profile[0].imagePath} 
                                                     alt={member.memberInfo.profile[0].name}
                                                 />
                                             ) : (
                                                 <div className="avatar-placeholder">
-                                                    {getInitials(member.memberInfo.profile[0]?.name || 'U')}
+                                                    {getInitials(member.memberInfo?.profile?.[0]?.name || 'U')}
                                                 </div>
                                             )}
                                         </div>
                                         <div className="member-basic-info">
                                             <div className="member-name-large">
-                                                {member.memberInfo.profile[0]?.name || '이름 없음'}
+                                                {member.memberInfo?.profile?.[0]?.name || '이름 없음'}
                                             </div>
                                             <div className="member-role-badge">
                                                 {member.memberInfo.role}
@@ -499,7 +517,11 @@ export default function TeamDashboard() {
                                         )}
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="no-members">
+                                    <p>팀 멤버가 없습니다.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

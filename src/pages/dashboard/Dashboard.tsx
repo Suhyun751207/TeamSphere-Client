@@ -464,7 +464,7 @@ export default function Dashboard() {
                                     <button
                                         className="dropdown-item"
                                         onClick={() => {
-                                            navigate('/profile');
+                                            navigate('/user/profile');
                                             setShowUserDropdown(false);
                                         }}
                                     >
@@ -555,7 +555,7 @@ export default function Dashboard() {
                             <div className="profile-card-actions">
                                 <button
                                     className="profile-action-btn settings-btn"
-                                    onClick={() => navigate('/profile')}
+                                    onClick={() => navigate('/user/profile')}
                                 >
                                     ⚙️ 프로필 설정
                                 </button>

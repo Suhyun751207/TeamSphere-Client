@@ -74,3 +74,13 @@ export interface ActivityLogWithUser extends ActivityLog {
 export interface TeamCreateRequest {
     name: string;
 }
+
+export interface TeamMemberCreateRequest {
+    memberId: number;
+    role: "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
+}
+
+
+export interface WorkspaceRole{
+    role: "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER";
+}

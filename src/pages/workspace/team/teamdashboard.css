@@ -23,6 +23,10 @@
     --spacing: 24px;
 }
 
+.team-dashboard-container{
+    padding: var(--spacing);
+}
+
 .team-dashboard {
     background: var(--bg);
     color: var(--text);

@@ -585,7 +585,6 @@ body {
 
 .add-team-btn:hover {
   background: var(--primary-dark);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
@@ -599,6 +598,7 @@ body {
 .chart-header span {
   color: var(--text-muted);
   font-size: 0.9rem;
+  margin-left: 8px;
 }
 
 .attendance-summary {
@@ -1017,7 +1017,9 @@ body {
 .teams-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .team-card {
@@ -1031,7 +1033,6 @@ body {
 
 .team-card:hover {
   border-color: var(--primary);
-  transform: translateY(-2px);
   box-shadow: var(--shadow);
 }
 
@@ -1070,6 +1071,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 250px;
+  overflow-y: auto;
 }
 
 .team-member-item {
@@ -1086,7 +1089,6 @@ body {
 
 .team-member-item:hover {
   border-color: var(--primary);
-  transform: translateY(-1px);
   box-shadow: var(--shadow);
 }
 
@@ -1223,4 +1225,37 @@ body {
 .no-tasks p {
   margin: 0;
   font-size: 14px;
+}
+
+
+.team-content-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-btn {
+  margin-right: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.dashboard-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.remove-member-btn {
+  margin-left: 12px;
+  font-size: 16px;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  transition: all 0.2s ease;
+}
+
+.remove-member-btn:hover {
+  background: var(--danger);
+  color: white;
 }
