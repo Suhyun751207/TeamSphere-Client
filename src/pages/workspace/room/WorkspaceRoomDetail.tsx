@@ -158,29 +158,20 @@ function WorkspaceRoomDetail() {
                 sendSocketMessage(parseInt(roomId), messageContent);
                 
                 // Add optimistic message to local state for immediate feedback
-                const getUserIdFromCookie = (): number => {
-                    const cookies = document.cookie.split(';');
-                    for (let cookie of cookies) {
-                        const [name, value] = cookie.trim().split('=');
-                        if (name === 'userId') {
-                            return parseInt(decodeURIComponent(value)) || 0;
-                        }
-                    }
-                    return 0;
-                };
+                const profileRes = await ProfileService.getMe();
+                const currentUserId = profileRes.data.user?.id || profileRes.data.profile?.userId || profileRes.data.id;
 
                 const optimisticMessage: MessageWithProfile & { isOptimistic?: boolean } = {
                     id: Date.now(), // Temporary ID
                     roomId: parseInt(roomId),
-                    userId: getUserIdFromCookie(),
+                    userId: currentUserId,
                     content: messageContent,
                     messageType: "TEXT",
                     isEdited: false,
                     isDeleted: false,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    userName: currentUserName,
-                    isOptimistic: true // Flag to identify optimistic messages
+                    userName: currentUserName
                 };
                 
                 setMessages(prev => [...prev, optimisticMessage]);

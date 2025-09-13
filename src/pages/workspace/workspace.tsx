@@ -207,6 +207,7 @@ function Workspace() {
             ]).then(([workspaceRes, userRes]) => {
                 setWorkspaceData(workspaceRes.data);
                 setCurrentUserWorkspaceInfo(userRes.data[0]);
+                loadWorkspaceRooms();
                 setLoading(false);
             }).catch((err) => {
                 console.error('Failed to load workspace data:', err);
@@ -878,7 +879,6 @@ function Workspace() {
                         </div>
                         <div className="members-list">
                             {members.slice().sort((a, b) => {
-                                console.log(a, b);
                                 const profileA = getMemberProfile(a.userId);
                                 const profileB = getMemberProfile(b.userId);
 

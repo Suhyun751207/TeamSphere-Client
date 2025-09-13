@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import TeamMessageServer from "../../../../api/workspace/team/teamMessage";
+import TeamMemberAPI from "../../../../api/workspace/team/teamMember";
 import ProfileService from "../../../../api/user/profile/profile";
 import useSocket from "../../../../hooks/useSocket";
 import { WorkspaceRoom } from '../../../../interface/Room';
-import { Member, MemberWithProfile } from '../../../../interface/Member';
+import { MemberWithProfile } from '../../../../interface/Member';
 import styles from './TeamRooms.module.css';
 
 function TeamRooms() {
@@ -20,6 +21,8 @@ function TeamRooms() {
     const [inviteUserId, setInviteUserId] = useState('');
     const [inviting, setInviting] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
+    const [teamMembers, setTeamMembers] = useState<any[]>([]);
+    const [teamMembersLoading, setTeamMembersLoading] = useState(false);
 
     const isRoomDetailPage = location.pathname.includes(`/workspace/${workspaceId}/team/${teamId}/room/`) && roomId;
 
@@ -106,6 +109,39 @@ function TeamRooms() {
         }
     }, [roomId, workspaceId, teamId]);
 
+    const loadTeamMembers = useCallback(async () => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setTeamMembersLoading(true);
+            const res = await TeamMemberAPI.getTeamMembers(Number(workspaceId), Number(teamId));
+            const membersWithProfiles = await Promise.all(
+                res.data.map(async (member: any) => {
+                    try {
+                        const profileRes = await ProfileService.getProfile(member.profile[0].userId);
+                        return {
+                            ...member,
+                            profile: profileRes.data.profile,
+                            name: profileRes.data.profile?.name || `User ${member.id}`
+                        };
+                    } catch (err) {
+                        console.error(`Failed to load profile for user ${member.id}:`, err);
+                        return {
+                            ...member,
+                            profile: null,
+                            name: `User ${member.id}`
+                        };
+                    }
+                })
+            );
+            setTeamMembers(membersWithProfiles);
+        } catch (err) {
+            console.error('Failed to load team members:', err);
+        } finally {
+            setTeamMembersLoading(false);
+        }
+    }, [workspaceId, teamId]);
+
     const inviteUser = async () => {
         if (!inviteUserId || !workspaceId || !teamId || !roomId) return;
 
@@ -158,10 +194,12 @@ function TeamRooms() {
 
     // Refresh room list when navigating back from room detail
     useEffect(() => {
-        if (!isRoomDetailPage) {
-            loadRooms();
+        loadRooms();
+        loadTeamMembers();
+        if (roomId) {
+            loadMembers();
         }
-    }, [isRoomDetailPage]);
+    }, [loadMembers, loadTeamMembers, roomId]);
 
     // Real-time room updates via Socket.IO
     useEffect(() => {
@@ -219,7 +257,7 @@ function TeamRooms() {
                 <div className={styles.navbarHeader}>
                     <div className={styles.headerLeft}>
                         <button
-                            onClick={() => navigate(`/workspace/${workspaceId}/team/${teamId}`)}
+                            onClick={() => navigate(`/workspace/${workspaceId}/team/${teamId}/dashboard`)}
                             className={styles.backButton}
                             title="팀 대시보드로 돌아가기"
                         >
@@ -332,17 +370,29 @@ function TeamRooms() {
                 <div className={styles.modal}>
                     <div className={styles.modalContent}>
                         <h3>팀 멤버 초대</h3>
-                        <input
-                            type="number"
-                            placeholder="사용자 ID 입력"
-                            value={inviteUserId}
-                            onChange={(e) => setInviteUserId(e.target.value)}
-                            className={styles.inviteInput}
-                        />
+                        {teamMembersLoading ? (
+                            <div className={styles.loading}>팀 멤버 목록을 불러오는 중...</div>
+                        ) : (
+                            <select
+                                value={inviteUserId}
+                                onChange={(e) => setInviteUserId(e.target.value)}
+                                className={styles.inviteSelect}
+                            >
+                                <option value="">초대할 팀 멤버를 선택하세요</option>
+                                {teamMembers
+                                    .filter(member => !members.some(roomMember => roomMember.userId === member.profile?.userId))
+                                    .map((member) => (
+                                        <option key={member.id || member.profile?.userId} value={member.profile?.userId}>
+                                            {member.name} (ID: {member.profile?.userId})
+                                        </option>
+                                    ))
+                                }
+                            </select>
+                        )}
                         <div className={styles.modalActions}>
                             <button
                                 onClick={inviteUser}
-                                disabled={inviting || !inviteUserId}
+                                disabled={inviting || !inviteUserId || teamMembersLoading}
                                 className={styles.inviteButton}
                             >
                                 {inviting ? '초대 중...' : '초대'}

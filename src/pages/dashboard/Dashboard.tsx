@@ -114,7 +114,11 @@ export default function Dashboard() {
                     try {
                         const response = await WorkspaceServer.WorkspaceDetail(workspaceId);
                         names[workspaceId] = response.data.workspace[0].name;
-                    } catch (error) {
+                    } catch (error: any) {
+                        if (error.response?.status === 401) {
+                            names[workspaceId] = `워크스페이스 ${workspaceId}`
+                            continue;
+                        }
                         console.error(`Failed to fetch workspace ${workspaceId}:`, error);
                         names[workspaceId] = `워크스페이스 ${workspaceId}`;
                     }

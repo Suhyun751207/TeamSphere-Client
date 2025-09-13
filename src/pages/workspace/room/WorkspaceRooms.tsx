@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Outlet, useLocation, useParams } from 'react-router-dom';
-import WorkspaceServer from "../../../api/workspace/workspace";
-import ProfileService from "../../../api/user/profile/profile";
+import WorkspaceServer from '../../../api/workspace/workspace';
+import TeamAPI from '../../../api/workspace/team';
+import ProfileServer from '../../../api/user/Profile';
 import useSocket from "../../../hooks/useSocket";
 import { WorkspaceRoom } from '../../../interface/Room';
 import { Member, MemberWithProfile } from '../../../interface/Member';
@@ -20,6 +21,10 @@ function WorkspaceRooms() {
     const [inviteUserId, setInviteUserId] = useState('');
     const [inviting, setInviting] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
+    const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+    const [workspaceMembersLoading, setWorkspaceMembersLoading] = useState(false);
+    const [selectedInviteUserId, setSelectedInviteUserId] = useState<string>('');
+    const [selectedRoom, setSelectedRoom] = useState<WorkspaceRoom | null>(null);
 
     const isRoomDetailPage = location.pathname.includes(`/workspace/${workspaceId}/room/`) && roomId;
 
@@ -31,7 +36,6 @@ function WorkspaceRooms() {
 
     const loadRooms = async () => {
         if (!workspaceId) return;
-
         try {
             setLoading(true);
             const res = await WorkspaceServer.WorkspaceRoomList(Number(workspaceId));
@@ -70,9 +74,9 @@ function WorkspaceRooms() {
             );
 
             // Sort rooms by last message time (most recent first)
-            const sortedRooms = roomsWithMessageTimes.sort((a, b) => {
-                const timeA = new Date(a.lastMessageTime || a.createdAt).getTime();
+            const sortedRooms = roomsWithMessageTimes.sort((a: any, b: any) => {
                 const timeB = new Date(b.lastMessageTime || b.createdAt).getTime();
+                const timeA = new Date(a.lastMessageTime || a.createdAt).getTime();
                 return timeB - timeA;
             });
 
@@ -94,7 +98,7 @@ function WorkspaceRooms() {
             const res = await WorkspaceServer.WorkspaceMemberList(Number(workspaceId), Number(roomId));
             const memberProfiles = await Promise.all(
                 res.data.members.map(async (member: any) => {
-                    const profileRes = await ProfileService.getProfile(member.userId);
+                    const profileRes = await ProfileServer.ProfileUserGet(member.userId);
                     return profileRes.data.profile;
                 })
             );
@@ -106,19 +110,50 @@ function WorkspaceRooms() {
         }
     }, [roomId, workspaceId]);
 
-    const inviteUser = async () => {
-        if (!inviteUserId || !workspaceId || !roomId) return;
+    const loadWorkspaceMembers = useCallback(async () => {
+        if (!workspaceId) return;
 
         try {
+            setWorkspaceMembersLoading(true);
+            const res = await TeamAPI.getWorkspaceMembers(Number(workspaceId));
+            const membersWithProfiles = await Promise.all(
+                res.data.map(async (member: any) => {
+                    try {
+                        const profileRes = await ProfileServer.ProfileUserGet(member.userId);
+                        return {
+                            ...member,
+                            profile: profileRes.data.profile,
+                            name: profileRes.data.profile?.name || `User ${member.userId}`
+                        };
+                    } catch (err) {
+                        console.error(`Failed to load profile for user ${member.userId}:`, err);
+                        return {
+                            ...member,
+                            profile: null,
+                            name: `User ${member.userId}`
+                        };
+                    }
+                })
+            );
+            setWorkspaceMembers(membersWithProfiles);
+        } catch (err) {
+            console.error('Failed to load workspace members:', err);
+        } finally {
+            setWorkspaceMembersLoading(false);
+        }
+    }, [workspaceId]);
+
+    const inviteUser = async () => {
+
+        if (!selectedInviteUserId || !roomId) return;
+        try {
             setInviting(true);
-            await WorkspaceServer.WorkspaceRoomMemberAdd(Number(workspaceId), Number(roomId), Number(inviteUserId));
-            setInviteUserId('');
+            await WorkspaceServer.WorkspaceRoomMemberAdd(Number(workspaceId), Number(roomId), Number(selectedInviteUserId));
             setShowInviteModal(false);
-            await loadMembers();
-        } catch (err: any) {
+            setSelectedInviteUserId('');
+            loadMembers();
+        } catch (err) {
             console.error('Failed to invite user:', err);
-            const errorMessage = err.response?.data?.message || '사용자 초대에 실패했습니다.';
-            alert(errorMessage);
         } finally {
             setInviting(false);
         }
@@ -153,8 +188,10 @@ function WorkspaceRooms() {
     }, [workspaceId]);
 
     useEffect(() => {
-        loadMembers();
-    }, [loadMembers]);
+        if (roomId) {
+            loadMembers();
+        }
+    }, [loadMembers, roomId]);
 
     // Refresh room list when navigating back from room detail
     useEffect(() => {
@@ -162,6 +199,12 @@ function WorkspaceRooms() {
             loadRooms();
         }
     }, [isRoomDetailPage]);
+
+    useEffect(() => {
+        if (showInviteModal && workspaceMembers.length === 0) {
+            loadWorkspaceMembers();
+        }
+    }, [showInviteModal, loadWorkspaceMembers, workspaceMembers.length]);
 
     // Real-time room updates via Socket.IO
     useEffect(() => {
@@ -332,17 +375,33 @@ function WorkspaceRooms() {
                 <div className={styles.modal}>
                     <div className={styles.modalContent}>
                         <h3>사용자 초대</h3>
-                        <input
-                            type="number"
-                            placeholder="사용자 ID 입력"
-                            value={inviteUserId}
-                            onChange={(e) => setInviteUserId(e.target.value)}
-                            className={styles.inviteInput}
-                        />
+                        {workspaceMembersLoading ? (
+                            <div className={styles.loadingContainer}>
+                                <span>멤버 목록 로딩 중...</span>
+                            </div>
+                        ) : (
+                            <select
+                                value={selectedInviteUserId}
+                                onChange={(e) => setSelectedInviteUserId(e.target.value)}
+                                className={styles.inviteSelect}
+                            >
+                                <option value="">멤버 선택</option>
+                                {workspaceMembers
+                                    .filter(member => {
+                                        return !members.some(roomMember => roomMember.userId === member.userId);
+                                    })
+                                    .map((member) => (
+                                        <option key={member.userId} value={member.userId}>
+                                            {member.name} (ID: {member.userId})
+                                        </option>
+                                    ))
+                                }
+                            </select>
+                        )}
                         <div className={styles.modalActions}>
                             <button
                                 onClick={inviteUser}
-                                disabled={inviting || !inviteUserId}
+                                disabled={inviting || !selectedInviteUserId || workspaceMembersLoading}
                                 className={styles.inviteButton}
                             >
                                 {inviting ? '초대 중...' : '초대'}
@@ -350,7 +409,7 @@ function WorkspaceRooms() {
                             <button
                                 onClick={() => {
                                     setShowInviteModal(false);
-                                    setInviteUserId('');
+                                    setSelectedInviteUserId('');
                                 }}
                                 className={styles.cancelButton}
                             >

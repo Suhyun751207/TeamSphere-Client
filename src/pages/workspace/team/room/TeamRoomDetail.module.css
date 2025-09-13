@@ -174,13 +174,14 @@
 .teamMessageItemLeft {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 1px solid #e2e8f0;
+    color: #1e293b;
     border-bottom-left-radius: 4px;
 }
 
 .teamMessageItemRight {
-    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     color: #1e293b;
-    border: 1px solid #c4b5fd;
+    border: 1px solid #e2e8f0;
     border-bottom-right-radius: 4px;
 }
 
@@ -190,8 +191,8 @@
 }
 
 .teamMessageItemRight:hover {
-    background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
-    border-color: #a78bfa;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    border-color: #e2e8f0;
 }
 
 /* Legacy message item for backward compatibility */
@@ -225,7 +226,7 @@
 .userId {
     font-weight: 600;
     font-size: 14px;
-    color: #7c3aed;
+    color: #1e293b;
 }
 
 .teamUserId {
@@ -235,11 +236,13 @@
 }
 
 .teamMessageItemLeft .teamUserId {
-    color: #7c3aed;
+    color: #1e293b;
+    font-weight: bold;
 }
 
 .teamMessageItemRight .teamUserId {
-    color: #6d28d9;
+    color: #1e293b;
+    font-weight: bold;
 }
 
 .messageDate {
