@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import ProfileServer from "../../../api/user/Profile";
 import ProfileService from "../../../api/user/profile/profile";
 import { ProfileData } from "../../../interface/ProfileData";
 import "./Profile.css";
 
 function Profile() {
+    const navigate = useNavigate();
     const [mergedData, setMergedData] = useState<ProfileData[]>([]);
-    const [currentUser, setCurrentUser] = useState<ProfileData | null>(null);
+    const [currentUser, setCurrentUser] = useState<ProfileData & { user?: { email: string } } | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -102,7 +103,12 @@ function Profile() {
                             </div>
                         </div>
                         <div className="profile-actions">
-                            <button className="edit-button">프로필 수정</button>
+                            <button 
+                                className="edit-button"
+                                onClick={() => navigate('/user/profile/edit')}
+                            >
+                                프로필 수정
+                            </button>
                         </div>
                     </div>
                 </section>

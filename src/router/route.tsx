@@ -6,6 +6,7 @@ import Dashboard from "../pages/dashboard/Dashboard";
 import Rooms from "../pages/user/room/Rooms";
 import RoomDetail from "../pages/user/room/RoomDetail";
 import Profile from "../pages/user/profile/Profile";
+import ProfileEdit from "../pages/user/profile/profileEdit";
 import Workspace from "../pages/workspace/workspace";
 import WorkspaceRooms from "../pages/workspace/room/WorkspaceRooms";
 import WorkspaceRoomDetail from "../pages/workspace/room/WorkspaceRoomDetail";
@@ -40,7 +41,11 @@ export default function Router() {
 
                 {/* User Routes */}
                 <Route path="/user">
-                    <Route path="profile" element={<Profile />} />
+                    <Route path="profile">
+                        <Route index element={<Profile />} />
+                        <Route path=":userId" element={<ProfileEdit />} />
+                        <Route path="edit" element={<ProfileEdit />} />
+                    </Route>
                     <Route path="rooms" element={<Rooms />}>
                         <Route path=":roomId" element={<RoomDetail />} />
                     </Route>

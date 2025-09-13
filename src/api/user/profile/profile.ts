@@ -1,3 +1,4 @@
+import { profilesUpdateResponse } from "../../../interface/Profile";
 import Api from "../../Api";
 
 const ProfileService = {
@@ -9,6 +10,14 @@ const ProfileService = {
     // Get current user's profile
     getMe: () => {
         return Api.get('/user/profile/me');
+    },
+
+    update: (profileId: number, data: FormData) => {
+        return Api.patch(`/user/profile/${profileId}`, data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 };
 
