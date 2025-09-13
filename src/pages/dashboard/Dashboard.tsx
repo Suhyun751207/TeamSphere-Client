@@ -277,7 +277,7 @@ export default function Dashboard() {
 
     const filterActivityLogs = (logs: any[]) => {
         let filteredLogs = logs;
-        
+
         // 필터링 적용
         if (activityFilter.trim()) {
             filteredLogs = logs.filter(log =>
@@ -285,7 +285,7 @@ export default function Dashboard() {
                 (workspaceNames[log.workspaceId] && workspaceNames[log.workspaceId].toLowerCase().includes(activityFilter.toLowerCase()))
             );
         }
-        
+
         // 최신 순으로 정렬 (createdAt 기준 내림차순)
         return filteredLogs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     };
@@ -472,18 +472,18 @@ export default function Dashboard() {
                                             setShowUserDropdown(false);
                                         }}
                                     >
-                                        <span className="dropdown-icon">⚙️</span>
-                                        프로필 설정
+                                        <span className="dropdown-icon">👤</span>
+                                        내 정보
                                     </button>
                                     <button
                                         className="dropdown-item"
                                         onClick={() => {
-                                            navigate('/user/profile');
+                                            navigate('/user/profile/edit');
                                             setShowUserDropdown(false);
                                         }}
                                     >
-                                        <span className="dropdown-icon">👤</span>
-                                        내 정보
+                                        <span className="dropdown-icon">⚙️</span>
+                                        프로필 설정
                                     </button>
                                     <div className="dropdown-divider"></div>
                                     <button
