@@ -164,7 +164,7 @@
 .messageItem {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 18px;
+    border-radius: 12px;
     padding: 0.75rem 1rem;
     transition: all 0.2s ease;
     max-width: 100%;
