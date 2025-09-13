@@ -35,8 +35,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // 쿠키는 서버에서 관리하므로 클라이언트에서 직접 제거하지 않음
-      console.log('Authentication failed - please login again');
+      return;
     }
     return Promise.reject(error);
   }
