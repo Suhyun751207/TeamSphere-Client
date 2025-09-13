@@ -20,19 +20,27 @@ export default function ProfileEdit() {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const response = await (userId 
-                    ? ProfileService.getProfile(Number(userId))
-                    : ProfileService.getMe());
-                setProfile(response.data);
-                if (response.data.imagePath) {
-                    setPreviewUrl(response.data.imagePath);
+                const response = await ProfileService.getMe();
+                const { profile: userProfile } = response.data;
+                
+                setProfile({
+                    name: userProfile.name,
+                    age: userProfile.age,
+                    gender: userProfile.gender,
+                    phone: userProfile.phone,
+                    imagePath: userProfile.imagePath
+                });
+
+                if (userProfile.imagePath) {
+                    setPreviewUrl(userProfile.imagePath);
                 }
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
+                alert('프로필 정보를 불러오는데 실패했습니다.');
             }
         };
         fetchProfile();
-    }, [userId]);
+    }, []);
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
