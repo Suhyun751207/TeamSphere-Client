@@ -35,19 +35,21 @@ export default function Dashboard() {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        DashboardService.Getdashboard().then((res) => {
-            setDashboardData(res.data);
-            setLoading(false);
+        DashboardService.Getdashboard().then(async (res) => {
+            if (!res.data.profile) {
+                await navigate('/user/profile/edit');
+            } else {
+                setDashboardData(res.data);
+                setLoading(false);
+            }
         }).catch((error) => {
             console.error("Dashboard data fetch error:", error);
             setLoading(false);
         });
 
-        // Check attendance status
         checkAttendanceStatus();
     }, []);
 
-    // Handle click outside dropdown to close it
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -119,7 +121,7 @@ export default function Dashboard() {
                             names[workspaceId] = `워크스페이스 ${workspaceId}`
                             continue;
                         }
-                        console.error(`Failed to fetch workspace ${workspaceId}:`, error);
+                        console.error(`그냥 접근 권한 없는 오류(신경X) ${workspaceId}:`, error);
                         names[workspaceId] = `워크스페이스 ${workspaceId}`;
                     }
                 }
@@ -168,6 +170,7 @@ export default function Dashboard() {
     }
 
     const { user, profile, activityLog, attendanceRecords, rooms, workspaces } = dashboardData;
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('ko-KR');
     };
@@ -237,7 +240,6 @@ export default function Dashboard() {
             navigate("/auth/login");
         } catch (error) {
             console.error("Logout failed:", error);
-            // Even if logout API fails, redirect to login page
             navigate("/auth/login");
         }
     };
