@@ -455,6 +455,29 @@
     transform: none;
 }
 
+.teamDateSeparator_date {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.teamDateSeparator_date::before,
+.teamDateSeparator_date::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.teamDateSeparator_date span {
+    padding: 0 16px;
+    font-size: 12px;
+    color: #64748b;
+    background: white;
+    font-weight: 500;
+}
+
 /* Date separator styles */
 .teamDateSeparator {
     display: flex;
