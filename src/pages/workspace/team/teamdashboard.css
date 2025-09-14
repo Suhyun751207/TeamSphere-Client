@@ -1106,10 +1106,6 @@
     justify-content: flex-end;
 }
 
-.teamDashboard-task-group {
-    /* border-left: 4px solid var(--primary);*/
-}
-
 .teamDashboard-task-title-row {
     display: flex;
     align-items: center;
