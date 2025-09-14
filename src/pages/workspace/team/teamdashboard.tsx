@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TeamDashboardData } from '../../../interface/teamDashboard';
 import { TaskCreateRequest, TaskByTaskCreateRequest, CommentCreateRequest } from '../../../interface/task';
-import './TeamDashboard.css';
+import './teamdashboard.css';
 import TeamAPI from '../../../api/workspace/team';
 import TeamMessageServer from '../../../api/workspace/team/teamMessage';
 import TaskService from '../../../api/task/task';
