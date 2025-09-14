@@ -21,8 +21,11 @@ export default function ProfileEdit() {
         const fetchProfile = async () => {
             try {
                 const response = await ProfileService.getMe();
+                if (response.data.profile == null) {
+                    return;
+                }
                 const { profile: userProfile } = response.data;
-                
+
                 setProfile({
                     name: userProfile.name,
                     age: userProfile.age,
@@ -36,7 +39,6 @@ export default function ProfileEdit() {
                 }
             } catch (error) {
                 console.error('Failed to fetch profile:', error);
-                alert('프로필 정보를 불러오는데 실패했습니다.');
             }
         };
         fetchProfile();
@@ -75,11 +77,14 @@ export default function ProfileEdit() {
             if (isNaN(profileId)) {
                 throw new Error('Invalid profile ID');
             }
+            if (data.data.profile == null) {
+                await ProfileService.create(profileId, formData);
+            } else {
+                await ProfileService.update(profileId, formData);
+            }
 
-            await ProfileService.update(profileId, formData);
-            
             // Navigate back to profile page
-            navigate('/user/profile');
+            navigate('/');
         } catch (error) {
             console.error('Failed to update profile:', error);
             alert('프로필 업데이트에 실패했습니다. 다시 시도해주세요.');
@@ -156,8 +161,8 @@ export default function ProfileEdit() {
                     <button type="submit" className="submit-button">
                         Save Changes
                     </button>
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         className="cancel-button"
                         onClick={() => navigate(-1)}
                     >

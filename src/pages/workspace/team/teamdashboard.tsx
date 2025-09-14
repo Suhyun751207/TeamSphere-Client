@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TeamDashboardData } from '../../../interface/teamDashboard';
+import { TaskCreateRequest, TaskByTaskCreateRequest, CommentCreateRequest } from '../../../interface/task';
 import './TeamDashboard.css';
 import TeamAPI from '../../../api/workspace/team';
 import TeamMessageServer from '../../../api/workspace/team/teamMessage';
+import TaskService from '../../../api/task/task';
+import ProfileService from '../../../api/user/profile/profile';
 import Footer from "../../../components/Footer";
 
 export default function TeamDashboard() {
@@ -18,6 +21,54 @@ export default function TeamDashboard() {
     const [roomsLoading, setRoomsLoading] = useState(false);
     const [roomMessages, setRoomMessages] = useState<{ [key: number]: string }>({});
 
+    // Task Management State
+    const [tasks, setTasks] = useState<any[]>([]);
+    const [tasksLoading, setTasksLoading] = useState(false);
+    const [tasksError, setTasksError] = useState<string | null>(null);
+    const [expandedTaskGroups, setExpandedTaskGroups] = useState<Set<number>>(new Set());
+    const [sortBy, setSortBy] = useState<string>('newest');
+    const [selectedTaskDetail, setSelectedTaskDetail] = useState<any>(null);
+    const [taskComments, setTaskComments] = useState<any[]>([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [memberDetails, setMemberDetails] = useState<{ [key: number]: any }>({});
+    const [commentProfiles, setCommentProfiles] = useState<{ [key: number]: any }>({});
+
+    // Task Edit Modal State
+    const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+    const [editingTask, setEditingTask] = useState<any>(null);
+    const [editTaskFormData, setEditTaskFormData] = useState<TaskCreateRequest>({
+        task: '',
+        priority: 'Medium',
+        state: 'To Do'
+    });
+
+    // Task Creation Form State
+    const [showTaskForm, setShowTaskForm] = useState(false);
+    const [taskFormData, setTaskFormData] = useState<TaskCreateRequest>({
+        task: '',
+        priority: 'Medium',
+        state: 'To Do'
+    });
+    const [selectedAssignee, setSelectedAssignee] = useState<number | null>(null);
+
+    // Child Task Creation State
+    const [showChildTaskForm, setShowChildTaskForm] = useState<{ [key: number]: boolean }>({});
+    const [childTaskFormData, setChildTaskFormData] = useState<TaskByTaskCreateRequest>({
+        title: '',
+        content: '',
+        tags: [],
+        attachments_path: []
+    });
+
+    // Comment State
+    const [showCommentForm, setShowCommentForm] = useState(false);
+    const [commentFormData, setCommentFormData] = useState<CommentCreateRequest>({
+        content: '',
+        parent_id: null
+    });
+    const [editingComment, setEditingComment] = useState<number | null>(null);
+    const [editCommentContent, setEditCommentContent] = useState('');
+
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
@@ -30,13 +81,18 @@ export default function TeamDashboard() {
             // 팀 채팅방 데이터 가져오기
             await fetchTeamRooms();
 
+            // 작업 데이터 가져오기
+            if (activeTab === 'tasks') {
+                await fetchTasks();
+            }
+
         } catch (err) {
             console.error('Error fetching team dashboard data:', err);
             setError('팀 대시보드 데이터를 불러오는데 실패했습니다.');
         } finally {
             setLoading(false);
         }
-    }, [workspaceId, teamId]);
+    }, [workspaceId, teamId, activeTab]);
 
     useEffect(() => {
         fetchData();
@@ -101,6 +157,287 @@ export default function TeamDashboard() {
         }
     };
 
+    // Task Management Functions
+    const fetchTasks = async () => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setTasksLoading(true);
+            setTasksError(null);
+            const response = await TaskService.getTeamTasks(Number(workspaceId), Number(teamId));
+            setTasks(response.data || []);
+        } catch (err) {
+            console.error('Error fetching tasks:', err);
+            setTasksError('작업 목록을 불러오는데 실패했습니다.');
+        } finally {
+            setTasksLoading(false);
+        }
+    };
+
+    const handleCreateTask = async () => {
+        if (!workspaceId || !teamId || !selectedAssignee) return;
+
+        try {
+            setTasksLoading(true);
+            const taskData = {
+                ...taskFormData,
+                teamMemberId: selectedAssignee
+            };
+            await TaskService.createTask(Number(workspaceId), Number(teamId), taskData);
+            await fetchTasks();
+            setShowTaskForm(false);
+            setTaskFormData({ task: '', priority: 'Medium', state: 'To Do' });
+            setSelectedAssignee(null);
+        } catch (err) {
+            console.error('Error creating task:', err);
+            setTasksError('작업 생성에 실패했습니다.');
+        } finally {
+            setTasksLoading(false);
+        }
+    };
+
+    const handleUpdateTask = async (tasksId: number, taskData: TaskCreateRequest) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setTasksLoading(true);
+            await TaskService.updateTask(Number(workspaceId), Number(teamId), tasksId, taskData);
+            await fetchTasks();
+        } catch (err) {
+            console.error('Error updating task:', err);
+            setTasksError('작업 업데이트에 실패했습니다.');
+        } finally {
+            setTasksLoading(false);
+        }
+    };
+
+    const handleEditTask = (task: any) => {
+        setEditingTask(task);
+        setEditTaskFormData({
+            task: task.task,
+            priority: task.priority,
+            state: task.state
+        });
+        setShowEditTaskModal(true);
+    };
+
+    const handleSaveTaskEdit = async () => {
+        if (!editingTask || !workspaceId || !teamId) return;
+
+        try {
+            setTasksLoading(true);
+            await TaskService.updateTask(Number(workspaceId), Number(teamId), editingTask.id, editTaskFormData);
+            await fetchTasks();
+            setShowEditTaskModal(false);
+            setEditingTask(null);
+            setEditTaskFormData({ task: '', priority: 'Medium', state: 'To Do' });
+        } catch (err) {
+            console.error('Error updating task:', err);
+            setTasksError('작업 업데이트에 실패했습니다.');
+        } finally {
+            setTasksLoading(false);
+        }
+    };
+
+    const handleCancelTaskEdit = () => {
+        setShowEditTaskModal(false);
+        setEditingTask(null);
+        setEditTaskFormData({ task: '', priority: 'Medium', state: 'To Do' });
+    };
+
+    const handleExpandTaskGroup = async (tasksId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        const newExpanded = new Set(expandedTaskGroups);
+        if (newExpanded.has(tasksId)) {
+            newExpanded.delete(tasksId);
+        } else {
+            newExpanded.add(tasksId);
+            // Fetch child tasks
+            try {
+                const response = await TaskService.TasksIdByGetTask(Number(workspaceId), Number(teamId), tasksId);
+                // Update tasks with child tasks data
+                setTasks(prevTasks =>
+                    prevTasks.map(task =>
+                        task.id === tasksId
+                            ? { ...task, childTasks: response.data || [] }
+                            : task
+                    )
+                );
+            } catch (err) {
+                console.error('Error fetching child tasks:', err);
+            }
+        }
+        setExpandedTaskGroups(newExpanded);
+    };
+
+    const handleCreateChildTask = async (tasksId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setTasksLoading(true);
+            await TaskService.TasksIdByCreateTask(Number(workspaceId), Number(teamId), tasksId, childTaskFormData);
+            // Refresh child tasks
+            const response = await TaskService.TasksIdByGetTask(Number(workspaceId), Number(teamId), tasksId);
+            setTasks(prevTasks =>
+                prevTasks.map(task =>
+                    task.id === tasksId
+                        ? { ...task, childTasks: response.data || [] }
+                        : task
+                )
+            );
+            setShowChildTaskForm({ ...showChildTaskForm, [tasksId]: false });
+            setChildTaskFormData({ title: '', content: '', tags: [], attachments_path: [] });
+        } catch (err) {
+            console.error('Error creating child task:', err);
+            setTasksError('하위 작업 생성에 실패했습니다.');
+        } finally {
+            setTasksLoading(false);
+        }
+    };
+
+    const fetchTaskComments = async (tasksId: number, taskId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setCommentsLoading(true);
+            const response = await TaskService.getComments(Number(workspaceId), Number(teamId), tasksId, taskId);
+            const comments = response.data || [];
+            setTaskComments(comments);
+
+            // Fetch profiles for all comment authors
+            const profilePromises = comments.map((comment: any) =>
+                comment.workspace_team_user_id ? fetchCommentProfile(comment.workspace_team_user_id) : null
+            );
+            await Promise.all(profilePromises.filter(Boolean));
+        } catch (err) {
+            console.error('Error fetching comments:', err);
+        } finally {
+            setCommentsLoading(false);
+        }
+    };
+
+    const fetchMemberDetails = async (memberId: number) => {
+        if (memberDetails[memberId]) return memberDetails[memberId];
+
+        try {
+            const response = await TaskService.taskMember(
+                Number(workspaceId),
+                Number(teamId),
+                memberId
+            );
+            const member = response.data;
+            setMemberDetails(prev => ({ ...prev, [memberId]: member }));
+            return member;
+        } catch (error) {
+            console.error('Failed to fetch member details:', error);
+            return null;
+        }
+    };
+
+    const fetchCommentProfile = async (workspaceTeamUserId: number) => {
+        if (commentProfiles[workspaceTeamUserId]) return commentProfiles[workspaceTeamUserId];
+
+        try {
+            const response = await ProfileService.getProfile(workspaceTeamUserId);
+            const profile = response.data.profile;
+            setCommentProfiles(prev => ({ ...prev, [workspaceTeamUserId]: profile }));
+            return profile;
+        } catch (error) {
+            console.error('Failed to fetch comment profile:', error);
+            return null;
+        }
+    };
+
+    const handleViewTaskDetail = async (tasksId: number, taskId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            const response = await TaskService.TasksIdByGetTaskId(Number(workspaceId), Number(teamId), tasksId, taskId);
+            setSelectedTaskDetail(response.data);
+            await fetchTaskComments(tasksId, taskId);
+        } catch (err) {
+            console.error('Error fetching task detail:', err);
+        }
+    };
+
+    const handleUpdateChildTask = async (tasksId: number, taskId: number, taskData: TaskByTaskCreateRequest) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setTasksLoading(true);
+            await TaskService.TasksIdByUpdateTaskId(Number(workspaceId), Number(teamId), tasksId, taskId, taskData);
+            // Refresh task detail
+            await handleViewTaskDetail(tasksId, taskId);
+            // Refresh child tasks list
+            const response = await TaskService.TasksIdByGetTask(Number(workspaceId), Number(teamId), tasksId);
+            setTasks(prevTasks =>
+                prevTasks.map(task =>
+                    task.id === tasksId
+                        ? { ...task, childTasks: response.data || [] }
+                        : task
+                )
+            );
+        } catch (err) {
+            console.error('Error updating child task:', err);
+            setTasksError('하위 작업 업데이트에 실패했습니다.');
+        } finally {
+            setTasksLoading(false);
+        }
+    };
+
+    const handleCreateComment = async (tasksId: number, taskId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setCommentsLoading(true);
+            await TaskService.createComment(Number(workspaceId), Number(teamId), tasksId, taskId, commentFormData);
+            await fetchTaskComments(tasksId, taskId);
+            setShowCommentForm(false);
+            setCommentFormData({ content: '', parent_id: null });
+        } catch (err) {
+            console.error('Error creating comment:', err);
+        } finally {
+            setCommentsLoading(false);
+        }
+    };
+
+    const handleViewCommentDetail = async (tasksId: number, taskId: number, commentsId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            const response = await TaskService.getCommentsId(Number(workspaceId), Number(teamId), tasksId, taskId, commentsId);
+            // Show comment detail in modal or expand view
+            console.log('Comment detail:', response.data);
+        } catch (err) {
+            console.error('Error fetching comment detail:', err);
+        }
+    };
+
+    const handleUpdateComment = async (tasksId: number, taskId: number, commentsId: number) => {
+        if (!workspaceId || !teamId) return;
+
+        try {
+            setCommentsLoading(true);
+            const updateData = { content: editCommentContent, parent_id: null };
+            await TaskService.updateComment(Number(workspaceId), Number(teamId), tasksId, taskId, commentsId, updateData);
+            await fetchTaskComments(tasksId, taskId);
+            setEditingComment(null);
+            setEditCommentContent('');
+        } catch (err) {
+            console.error('Error updating comment:', err);
+        } finally {
+            setCommentsLoading(false);
+        }
+    };
+
+    // Effect to fetch tasks when switching to tasks tab
+    useEffect(() => {
+        if (activeTab === 'tasks' && workspaceId && teamId) {
+            fetchTasks();
+        }
+    }, [activeTab, workspaceId, teamId]);
+
     const getTaskStats = () => {
         if (!dashboardData?.tasks) return { total: 0, completed: 0, inProgress: 0, todo: 0 };
 
@@ -148,7 +485,24 @@ export default function TeamDashboard() {
     };
 
     const formatDate = (dateString: string) => {
+        if (isNaN(new Date(dateString).getTime())) return '오류';
         return new Date(dateString).toLocaleDateString('ko-KR');
+    };
+
+    const sortTasks = (tasks: any[]) => {
+        const sortedTasks = [...tasks];
+        
+        switch (sortBy) {
+            case 'newest':
+                return sortedTasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            case 'oldest':
+                return sortedTasks.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            case 'priority':
+                const priorityOrder: Record<string, number> = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                return sortedTasks.sort((a, b) => (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0));
+            default:
+                return sortedTasks;
+        }
     };
 
     const getMemberByTeamMemberId = (teamMemberId: number) => {
@@ -338,13 +692,124 @@ export default function TeamDashboard() {
 
                             {activeTab === 'tasks' && (
                                 <div className="teamDashboard-tasks">
+                                    {/* Task Creation Form */}
+                                    <div className="teamDashboard-task-creation">
+                                        <div className="teamDashboard-task-creation-header">
+                                            <h4>새 작업 그룹 생성</h4>
+                                            <div className="teamDashboard-task-header-controls">
+                                                <select
+                                                    value={sortBy}
+                                                    onChange={(e) => setSortBy(e.target.value)}
+                                                    className="teamDashboard-sort-select"
+                                                >
+                                                    <option value="newest">최신순</option>
+                                                    <option value="oldest">오래된 순서</option>
+                                                    <option value="priority">우선순위</option>
+                                                </select>
+                                                <button
+                                                    className="teamDashboard-btn-primary"
+                                                    onClick={() => setShowTaskForm(!showTaskForm)}
+                                                >
+                                                    {showTaskForm ? '취소' : '+ 작업 추가'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {showTaskForm && (
+                                            <div className="teamDashboard-task-form">
+                                                <div className="teamDashboard-form-row">
+                                                    <div className="teamDashboard-form-group">
+                                                        <label>작업 제목</label>
+                                                        <input
+                                                            type="text"
+                                                            value={taskFormData.task}
+                                                            onChange={(e) => setTaskFormData({ ...taskFormData, task: e.target.value })}
+                                                            placeholder="작업 제목을 입력하세요"
+                                                        />
+                                                    </div>
+                                                    <div className="teamDashboard-form-group">
+                                                        <label>우선순위</label>
+                                                        <select
+                                                            value={taskFormData.priority}
+                                                            onChange={(e) => setTaskFormData({ ...taskFormData, priority: e.target.value as any })}
+                                                        >
+                                                            <option value="High">높음</option>
+                                                            <option value="Medium">보통</option>
+                                                            <option value="Low">낮음</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="teamDashboard-form-row">
+                                                    <div className="teamDashboard-form-group">
+                                                        <label>상태</label>
+                                                        <select
+                                                            value={taskFormData.state}
+                                                            onChange={(e) => setTaskFormData({ ...taskFormData, state: e.target.value as any })}
+                                                        >
+                                                            <option value="To Do">할 일</option>
+                                                            <option value="In Progress">진행 중</option>
+                                                            <option value="Done">완료</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="teamDashboard-form-group">
+                                                        <label>담당자</label>
+                                                        <select
+                                                            value={selectedAssignee || ''}
+                                                            onChange={(e) => setSelectedAssignee(Number(e.target.value))}
+                                                        >
+                                                            <option value="">담당자 선택</option>
+                                                            {dashboardData?.teamMembers.map(member => (
+                                                                <option key={member.id} value={member.id}>
+                                                                    {member.profile.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div className="teamDashboard-form-actions">
+                                                    <button
+                                                        className="teamDashboard-btn-primary"
+                                                        onClick={handleCreateTask}
+                                                        disabled={!taskFormData.task || !selectedAssignee || tasksLoading}
+                                                    >
+                                                        {tasksLoading ? '생성 중...' : '작업 생성'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Tasks Error */}
+                                    {tasksError && (
+                                        <div className="teamDashboard-error">{tasksError}</div>
+                                    )}
+
+                                    {/* Tasks Loading */}
+                                    {tasksLoading && (
+                                        <div className="teamDashboard-loading">작업 목록을 불러오는 중...</div>
+                                    )}
+
+                                    {/* Tasks List */}
                                     <div className="teamDashboard-tasks-list">
-                                        {dashboardData.tasks.map((task) => {
+                                        {tasks.length === 0 ? (
+                                            <div className="teamDashboard-empty-state">생성된 작업이 없습니다.</div>
+                                        ) : (
+                                            sortTasks(tasks).map((task) => {
                                             const assignedMember = getMemberByTeamMemberId(task.teamMemberId);
+                                            const isExpanded = expandedTaskGroups.has(task.id);
+
                                             return (
-                                                <div key={task.id} className="teamDashboard-task-card">
+                                                <div key={task.id} className="teamDashboard-task-card teamDashboard-task-group">
                                                     <div className="teamDashboard-task-header">
-                                                        <div className="teamDashboard-task-title">{task.task}</div>
+                                                        <div className="teamDashboard-task-title-row">
+                                                            <button
+                                                                className="teamDashboard-expand-btn"
+                                                                onClick={() => handleExpandTaskGroup(task.id)}
+                                                            >
+                                                                {isExpanded ? '▼' : '▶'}
+                                                            </button>
+                                                            <div className="teamDashboard-task-title">{task.task}</div>
+                                                        </div>
                                                         <div className="teamDashboard-task-badges">
                                                             <span className={`teamDashboard-priority-badge ${getPriorityBadgeClass(task.priority)}`}>
                                                                 {task.priority}
@@ -352,11 +817,24 @@ export default function TeamDashboard() {
                                                             <span className={`teamDashboard-state-badge ${getStateBadgeClass(task.state)}`}>
                                                                 {task.state}
                                                             </span>
+                                                            <button
+                                                                className="teamDashboard-task-settings-btn"
+                                                                onClick={() => handleEditTask(task)}
+                                                                title="작업 설정"
+                                                            >
+                                                                ⚙️
+                                                            </button>
                                                         </div>
                                                     </div>
+
                                                     <div className="teamDashboard-task-details">
                                                         {assignedMember && (
-                                                            <div className="teamDashboard-task-assignee">
+                                                            <div
+                                                                className="teamDashboard-task-assignee"
+                                                                onClick={() => fetchMemberDetails(assignedMember.id)}
+                                                                style={{ cursor: 'pointer' }}
+                                                                title="클릭하여 멤버 상세 정보 보기"
+                                                            >
                                                                 <div className="teamDashboard-assignee-avatar">
                                                                     {assignedMember.profile.imagePath ? (
                                                                         <img src={assignedMember.profile.imagePath} alt={assignedMember.profile.name} />
@@ -372,10 +850,246 @@ export default function TeamDashboard() {
                                                             <span>수정일: {formatDate(task.updatedAt)}</span>
                                                         </div>
                                                     </div>
+
+                                                    {/* Task Group Actions */}
+                                                    <div className="teamDashboard-task-actions">
+                                                        <button
+                                                            className="teamDashboard-btn-secondary"
+                                                            onClick={() => setShowChildTaskForm({ ...showChildTaskForm, [task.id]: !showChildTaskForm[task.id] })}
+                                                        >
+                                                            하위 작업 추가
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Child Task Creation Form */}
+                                                    {showChildTaskForm[task.id] && (
+                                                        <div className="teamDashboard-child-task-form">
+                                                            <div className="teamDashboard-form-group">
+                                                                <label>제목</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={childTaskFormData.title}
+                                                                    onChange={(e) => setChildTaskFormData({ ...childTaskFormData, title: e.target.value })}
+                                                                    placeholder="하위 작업 제목"
+                                                                />
+                                                            </div>
+                                                            <div className="teamDashboard-form-group">
+                                                                <label>내용</label>
+                                                                <textarea
+                                                                    value={childTaskFormData.content}
+                                                                    onChange={(e) => setChildTaskFormData({ ...childTaskFormData, content: e.target.value })}
+                                                                    placeholder="하위 작업 내용"
+                                                                    rows={3}
+                                                                />
+                                                            </div>
+                                                            <div className="teamDashboard-form-group">
+                                                                <label>태그 (쉼표로 구분)</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={childTaskFormData.tags.join(', ')}
+                                                                    onChange={(e) => setChildTaskFormData({ ...childTaskFormData, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+                                                                    placeholder="태그1, 태그2, 태그3"
+                                                                />
+                                                            </div>
+                                                            <div className="teamDashboard-form-actions">
+                                                                <button
+                                                                    className="teamDashboard-btn-primary"
+                                                                    onClick={() => handleCreateChildTask(task.id)}
+                                                                    disabled={!childTaskFormData.title || tasksLoading}
+                                                                >
+                                                                    하위 작업 생성
+                                                                </button>
+                                                                <button
+                                                                    className="teamDashboard-btn-secondary"
+                                                                    onClick={() => setShowChildTaskForm({ ...showChildTaskForm, [task.id]: false })}
+                                                                >
+                                                                    취소
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Child Tasks List */}
+                                                    {isExpanded && task.childTasks && (
+                                                        <div className="teamDashboard-child-tasks">
+                                                            <h5>하위 작업 목록</h5>
+                                                            {task.childTasks.length > 0 ? (
+                                                                <div className="teamDashboard-child-tasks-list">
+                                                                    {task.childTasks.map((childTask: any) => (
+                                                                        <div
+                                                                            key={childTask.id}
+                                                                            className="teamDashboard-child-task-item"
+                                                                            onClick={() => handleViewTaskDetail(task.id, childTask.id)}
+                                                                        >
+                                                                            <div className="teamDashboard-child-task-title">{childTask.title}</div>
+                                                                            <div className="teamDashboard-child-task-content">{childTask.content}</div>
+                                                                            {childTask.tags && childTask.tags.length > 0 && (
+                                                                                <div className="teamDashboard-child-task-tags">
+                                                                                    {childTask.tags.map((tag: string, index: number) => (
+                                                                                        <span key={index} className="teamDashboard-tag">{tag}</span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="teamDashboard-no-child-tasks">하위 작업이 없습니다.</p>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
-                                        })}
+                                        })
+                                        )}
+
+                                        {tasks.length === 0 && !tasksLoading && (
+                                            <div className="teamDashboard-no-tasks">
+                                                <p>생성된 작업이 없습니다.</p>
+                                                <button
+                                                    className="teamDashboard-btn-primary"
+                                                    onClick={() => setShowTaskForm(true)}
+                                                >
+                                                    첫 번째 작업 만들기
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* Task Detail Modal */}
+                                    {selectedTaskDetail && (
+                                        <div className="teamDashboard-modal-overlay" onClick={() => setSelectedTaskDetail(null)}>
+                                            <div className="teamDashboard-modal" onClick={(e) => e.stopPropagation()}>
+                                                <div className="teamDashboard-modal-header">
+                                                    <h3>작업 상세 정보</h3>
+                                                    <button
+                                                        className="teamDashboard-modal-close"
+                                                        onClick={() => setSelectedTaskDetail(null)}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                                <div className="teamDashboard-modal-content">
+                                                    <div className="teamDashboard-task-detail">
+                                                        <h4>{selectedTaskDetail.title}</h4>
+                                                        <p>{selectedTaskDetail.content}</p>
+                                                        {selectedTaskDetail.tags && selectedTaskDetail.tags.length > 0 && (
+                                                            <div className="teamDashboard-task-detail-tags">
+                                                                {selectedTaskDetail.tags.map((tag: string, index: number) => (
+                                                                    <span key={index} className="teamDashboard-tag">{tag}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Comments Section */}
+                                                    <div className="teamDashboard-comments-section">
+                                                        <div className="teamDashboard-comments-header">
+                                                            <h5>댓글</h5>
+                                                            <button
+                                                                className="teamDashboard-btn-secondary"
+                                                                onClick={() => setShowCommentForm(!showCommentForm)}
+                                                            >
+                                                                댓글 추가
+                                                            </button>
+                                                        </div>
+
+                                                        {showCommentForm && (
+                                                            <div className="teamDashboard-comment-form">
+                                                                <textarea
+                                                                    value={commentFormData.content}
+                                                                    onChange={(e) => setCommentFormData({ ...commentFormData, content: e.target.value })}
+                                                                    placeholder="댓글을 입력하세요"
+                                                                    rows={3}
+                                                                />
+                                                                <div className="teamDashboard-form-actions">
+                                                                    <button
+                                                                        className="teamDashboard-btn-primary"
+                                                                        onClick={() => handleCreateComment(selectedTaskDetail.tasksId, selectedTaskDetail.id)}
+                                                                        disabled={!commentFormData.content || commentsLoading}
+                                                                    >
+                                                                        댓글 작성
+                                                                    </button>
+                                                                    <button
+                                                                        className="teamDashboard-btn-secondary"
+                                                                        onClick={() => setShowCommentForm(false)}
+                                                                    >
+                                                                        취소
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {commentsLoading ? (
+                                                            <div className="teamDashboard-loading">댓글을 불러오는 중...</div>
+                                                        ) : (
+                                                            <div className="teamDashboard-comments-list">
+                                                                {taskComments.map((comment: any) => (
+                                                                    <div key={comment.id} className="teamDashboard-comment-item">
+                                                                        <div className="teamDashboard-comment-header">
+                                                                            <span className="teamDashboard-comment-author">
+                                                                                {comment.workspace_team_user_id && commentProfiles[comment.workspace_team_user_id]
+                                                                                    ? commentProfiles[comment.workspace_team_user_id].name || commentProfiles[comment.workspace_team_user_id].username
+                                                                                    : comment.author || 'Unknown'}
+                                                                            </span>
+                                                                            <span className="teamDashboard-comment-date">{formatDate(comment.created_at)}</span>
+                                                                            <div className="teamDashboard-comment-actions">
+                                                                                <button
+                                                                                    className="teamDashboard-btn-link"
+                                                                                    onClick={() => {
+                                                                                        setEditingComment(comment.id);
+                                                                                        setEditCommentContent(comment.content);
+                                                                                    }}
+                                                                                >
+                                                                                    수정
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {editingComment === comment.id ? (
+                                                                            <div className="teamDashboard-comment-edit">
+                                                                                <textarea
+                                                                                    value={editCommentContent}
+                                                                                    onChange={(e) => setEditCommentContent(e.target.value)}
+                                                                                    rows={3}
+                                                                                />
+                                                                                <div className="teamDashboard-form-actions">
+                                                                                    <button
+                                                                                        className="teamDashboard-btn-primary"
+                                                                                        onClick={() => handleUpdateComment(selectedTaskDetail.tasksId, selectedTaskDetail.id, comment.id)}
+                                                                                        disabled={commentsLoading}
+                                                                                    >
+                                                                                        저장
+                                                                                    </button>
+                                                                                    <button
+                                                                                        className="teamDashboard-btn-secondary"
+                                                                                        onClick={() => {
+                                                                                            setEditingComment(null);
+                                                                                            setEditCommentContent('');
+                                                                                        }}
+                                                                                    >
+                                                                                        취소
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="teamDashboard-comment-content">
+                                                                                {comment.content}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+
+                                                                {taskComments.length === 0 && (
+                                                                    <p className="teamDashboard-no-comments">댓글이 없습니다.</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -461,6 +1175,75 @@ export default function TeamDashboard() {
                     )}
                 </section>
             </div>
+
+            {/* Task Edit Modal */}
+            {showEditTaskModal && (
+                <div className="teamDashboard-modal-overlay">
+                    <div className="teamDashboard-modal">
+                        <div className="teamDashboard-modal-header">
+                            <h3>작업 편집</h3>
+                            <button
+                                className="teamDashboard-modal-close"
+                                onClick={handleCancelTaskEdit}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="teamDashboard-modal-content">
+                            <div className="teamDashboard-form-group">
+                                <label>작업 이름</label>
+                                <input
+                                    type="text"
+                                    value={editTaskFormData.task}
+                                    onChange={(e) => setEditTaskFormData(prev => ({ ...prev, task: e.target.value }))}
+                                    placeholder="작업 이름을 입력하세요"
+                                    className="teamDashboard-form-input"
+                                />
+                            </div>
+                            <div className="teamDashboard-form-group">
+                                <label>우선순위</label>
+                                <select
+                                    value={editTaskFormData.priority}
+                                    onChange={(e) => setEditTaskFormData(prev => ({ ...prev, priority: e.target.value as any }))}
+                                    className="teamDashboard-form-select"
+                                >
+                                    <option value="Low">낮음</option>
+                                    <option value="Medium">보통</option>
+                                    <option value="High">높음</option>
+                                </select>
+                            </div>
+                            <div className="teamDashboard-form-group">
+                                <label>상태</label>
+                                <select
+                                    value={editTaskFormData.state}
+                                    onChange={(e) => setEditTaskFormData(prev => ({ ...prev, state: e.target.value as any }))}
+                                    className="teamDashboard-form-select"
+                                >
+                                    <option value="To Do">할 일</option>
+                                    <option value="In Progress">진행 중</option>
+                                    <option value="Done">완료</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="teamDashboard-modal-footer">
+                            <button
+                                className="teamDashboard-btn-secondary"
+                                onClick={handleCancelTaskEdit}
+                            >
+                                취소
+                            </button>
+                            <button
+                                className="teamDashboard-btn-primary"
+                                onClick={handleSaveTaskEdit}
+                                disabled={!editTaskFormData.task.trim()}
+                            >
+                                저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Footer />
         </>
     );

@@ -12,6 +12,14 @@ const ProfileService = {
         return Api.get('/user/profile/me');
     },
 
+    create: (profileId: number, data: FormData) => {
+        return Api.post(`/user/profile/${profileId}`, data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+
     update: (profileId: number, data: FormData) => {
         return Api.patch(`/user/profile/${profileId}`, data, {
             headers: {

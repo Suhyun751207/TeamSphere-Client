@@ -184,9 +184,9 @@ function TeamRoomDetail() {
         e.preventDefault();
         if (!roomId || !workspaceId || !teamId || !newMessage.trim() || sending) return;
         const messageContent = newMessage.trim();
-        setNewMessage(''); 
+        setNewMessage('');
         setSending(true);
-        
+
         // Stop typing indicator
         if (isTyping) {
             stopTyping(parseInt(roomId));
@@ -197,7 +197,7 @@ function TeamRoomDetail() {
             if (isConnected) {
                 // Send via Socket.IO for real-time delivery (Socket server handles DB creation)
                 sendSocketMessage(parseInt(roomId), messageContent);
-                
+
                 // Add optimistic message to local state for immediate feedback
                 const profileRes = await ProfileService.getMe();
                 const currentUserId = profileRes.data.user?.id || profileRes.data.profile?.userId || profileRes.data.id;
@@ -214,10 +214,10 @@ function TeamRoomDetail() {
                     updatedAt: new Date().toISOString(),
                     userName: currentUserName
                 };
-                
+
                 setMessages(prev => [...prev, optimisticMessage]);
                 setTimeout(scrollToBottom, 100);
-                
+
             } else {
                 // Fallback to API when socket is not connected
                 await TeamMessageServer.TeamMessageCreate(Number(workspaceId), Number(teamId), Number(roomId), {
@@ -259,7 +259,7 @@ function TeamRoomDetail() {
                 // Get user profile for the message
                 const profileRes = await ProfileService.getProfile(message.userId);
                 const userName = profileRes.data.user?.name || profileRes.data.profile?.name || `User ${message.userId}`;
-                
+
                 const messageWithProfile: MessageWithProfile = {
                     ...message,
                     messageType: (message.type === "IMAGE" || message.type === "FILE") ? message.type : "TEXT",
@@ -271,22 +271,22 @@ function TeamRoomDetail() {
 
                 setMessages(prev => {
                     // Clear timeout for optimistic message if it exists
-                    const optimisticMsg = prev.find(msg => 
-                        (msg as any).isOptimistic && 
-                        msg.content === message.content && 
+                    const optimisticMsg = prev.find(msg =>
+                        (msg as any).isOptimistic &&
+                        msg.content === message.content &&
                         msg.userId === message.userId
                     );
                     if (optimisticMsg && (optimisticMsg as any).timeoutId) {
                         clearTimeout((optimisticMsg as any).timeoutId);
                     }
-                    
+
                     // Remove optimistic message if it exists (same content and user)
-                    const filteredMessages = prev.filter(msg => 
-                        !(msg as any).isOptimistic || 
-                        msg.content !== message.content || 
+                    const filteredMessages = prev.filter(msg =>
+                        !(msg as any).isOptimistic ||
+                        msg.content !== message.content ||
                         msg.userId !== message.userId
                     );
-                    
+
                     // Check if real message already exists to avoid duplicates
                     const exists = filteredMessages.some(msg => msg.id === message.id);
                     if (exists) {
@@ -306,25 +306,25 @@ function TeamRoomDetail() {
                     updatedAt: new Date(message.updatedAt).toISOString(),
                     userName: `User ${message.userId}`
                 };
-                
+
                 setMessages(prev => {
                     // Clear timeout for optimistic message if it exists
-                    const optimisticMsg = prev.find(msg => 
-                        (msg as any).isOptimistic && 
-                        msg.content === message.content && 
+                    const optimisticMsg = prev.find(msg =>
+                        (msg as any).isOptimistic &&
+                        msg.content === message.content &&
                         msg.userId === message.userId
                     );
                     if (optimisticMsg && (optimisticMsg as any).timeoutId) {
                         clearTimeout((optimisticMsg as any).timeoutId);
                     }
-                    
+
                     // Remove optimistic message if it exists
-                    const filteredMessages = prev.filter(msg => 
-                        !(msg as any).isOptimistic || 
-                        msg.content !== message.content || 
+                    const filteredMessages = prev.filter(msg =>
+                        !(msg as any).isOptimistic ||
+                        msg.content !== message.content ||
                         msg.userId !== message.userId
                     );
-                    
+
                     const exists = filteredMessages.some(msg => msg.id === message.id);
                     if (exists) return filteredMessages;
                     return [...filteredMessages, messageWithProfile];
@@ -337,7 +337,7 @@ function TeamRoomDetail() {
         const unsubscribeMessageError = onMessageError((error) => {
             console.error('Socket message error:', error);
             setError(`Message error: ${error.error}`);
-            
+
             // Remove failed optimistic messages
             setMessages(prev => prev.filter(msg => !(msg as any).isOptimistic));
         });
@@ -376,12 +376,12 @@ function TeamRoomDetail() {
                         // Fetch user name asynchronously
                         ProfileService.getProfile(data.userId)
                             .then((response: any) => {
-                                setTypingUserNames(prevNames => 
+                                setTypingUserNames(prevNames =>
                                     new Map(prevNames).set(data.userId, response.data.profile.name || `User ${data.userId}`)
                                 );
                             })
                             .catch(() => {
-                                setTypingUserNames(prevNames => 
+                                setTypingUserNames(prevNames =>
                                     new Map(prevNames).set(data.userId, `User ${data.userId}`)
                                 );
                             });
@@ -391,7 +391,6 @@ function TeamRoomDetail() {
                 });
             }
         });
-
         // Cleanup function
         return () => {
             if (roomId) {
@@ -402,6 +401,28 @@ function TeamRoomDetail() {
             unsubscribeUserTyping();
         };
     }, [roomId, isConnected, joinRoom, leaveRoom, onNewMessage, onMessageError, onUserTyping]);
+
+    const shouldShowDateSeparator = (currentMessage: MessageWithProfile, previousMessage?: MessageWithProfile) => {
+        if (!previousMessage) return true;
+
+        const currentDate = new Date(currentMessage.createdAt);
+        const previousDate = new Date(previousMessage.createdAt);
+
+        // 시간이 다르면 구분선 표시
+        return currentDate.getHours() !== previousDate.getHours() ||
+            currentDate.getDate() !== previousDate.getDate();
+    };
+
+    const formatDateSeparator = (dateString: string) => {
+        return new Date(dateString).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+            hour: 'numeric',
+            hour12: true
+        });
+    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('ko-KR', {
@@ -448,49 +469,64 @@ function TeamRoomDetail() {
                             No messages in this team room yet. Start the conversation!
                         </div>
                     ) : (
-                        messages.map((message) => (
-                            <MessageItem
-                                key={message.id}
-                                message={message}
-                                formatDate={formatDate}
-                            />
-                        ))
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-                
-                {/* Typing indicators */}
-                {typingUsers.size > 0 && (
-                    <div className={styles.typingIndicator}>
-                        {Array.from(typingUsers).length === 1 
-                            ? `${typingUserNames.get(Array.from(typingUsers)[0]) || `User ${Array.from(typingUsers)[0]}`} is typing...`
-                            : `${Array.from(typingUsers).length} users are typing...`
-                        }
-                    </div>
-                )}
-            </div>
+                        <div className={styles.messagesList}>
+                            {messages.map((message, index) => {
+                                const previousMessage = index > 0 ? messages[index - 1] : undefined;
+                                const showDateSeparator = shouldShowDateSeparator(message, previousMessage);
 
-            <form onSubmit={sendMessage} className={styles.messageForm}>
-                <div className={styles.inputContainer}>
-                    <input
-                        ref={messageInputRef}
-                        type="text"
-                        value={newMessage}
-                        onChange={handleInputChange}
-                        placeholder="Type your team message..."
-                        className={styles.messageInput}
-                        disabled={sending || !isConnected}
-                        autoFocus
-                    />
-                    <button
-                        type="submit"
-                        disabled={!newMessage.trim() || sending || !isConnected}
-                        className={styles.sendButton}
-                    >
-                        {sending ? '⟳' : '→'}
-                    </button>
+                                return (
+                                    <div key={message.id}>
+                                        {showDateSeparator && (
+                                            <div className={styles.teamDateSeparator_date}>
+                                                <span>
+                                                    {formatDateSeparator(message.createdAt)}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <MessageItem
+                                            message={message}
+                                            formatDate={formatDate}
+                                        />
+                                    </div>
+                                );
+                            })}
+                            <div ref={messagesEndRef} />
+                        </div>
+                    )}
+
+                    {/* Typing indicators */}
+                    {typingUsers.size > 0 && (
+                        <div className={styles.typingIndicator}>
+                            {Array.from(typingUsers).length === 1
+                                ? `${typingUserNames.get(Array.from(typingUsers)[0]) || `User ${Array.from(typingUsers)[0]}`} is typing...`
+                                : `${Array.from(typingUsers).length} users are typing...`
+                            }
+                        </div>
+                    )}
                 </div>
-            </form>
+
+                <form onSubmit={sendMessage} className={styles.messageForm}>
+                    <div className={styles.inputContainer}>
+                        <input
+                            ref={messageInputRef}
+                            type="text"
+                            value={newMessage}
+                            onChange={handleInputChange}
+                            placeholder="Type your team message..."
+                            className={styles.messageInput}
+                            disabled={sending || !isConnected}
+                            autoFocus
+                        />
+                        <button
+                            type="submit"
+                            disabled={!newMessage.trim() || sending || !isConnected}
+                            className={styles.sendButton}
+                        >
+                            {sending ? '⟳' : '→'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
