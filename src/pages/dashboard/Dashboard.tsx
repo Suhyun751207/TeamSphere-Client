@@ -774,10 +774,6 @@ export default function Dashboard() {
                                                     </div>
                                                     <div className="activity-date">{formatDate(log.createdAt)}</div>
                                                 </div>
-                                                <div className="activity-actions">
-                                                    <button className="action-btn ghost" title="복사">📋</button>
-                                                    <button className="action-btn ghost" title="상세보기">👁️</button>
-                                                </div>
                                             </div>
                                         ))}
                                     </div>
