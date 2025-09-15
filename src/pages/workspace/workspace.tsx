@@ -1446,10 +1446,10 @@ function Workspace() {
                                             fontSize: '14px'
                                         }}
                                     >
-                                        <option value="VIEWER">Viewer</option>
-                                        <option value="MEMBER">Member</option>
-                                        <option value="MANAGER">Manager</option>
-                                        <option value="ADMIN">Admin</option>
+                                        <option value="Viewer">Viewer</option>
+                                        <option value="Member">Member</option>
+                                        <option value="Manager">Manager</option>
+                                        <option value="Admin">Admin</option>
                                     </select>
                                 </div>
 
