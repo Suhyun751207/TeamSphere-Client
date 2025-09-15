@@ -2,7 +2,7 @@ import api from "../Api";
 import { TaskCreateRequest, TaskByTaskCreateRequest, CommentCreateRequest } from "../../interface/task";
 
 function taskBase(workspaceId: number, teamId: number) {
-    return `/workspace/${workspaceId}/teams/${teamId}/tasks`;
+    return `/v1/workspace/${workspaceId}/teams/${teamId}/tasks`;
 }
 
 async function getTeamTasks(workspaceId: number, teamId: number) {

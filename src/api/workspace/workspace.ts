@@ -69,17 +69,17 @@ async function WorkspaceActivityLogList(workspaceId: number) {
 
 //워크스페이스 활동 로그 생성
 async function WorkspaceActivityLogCreate(workspaceId: number, data: ActivityLogsCreate) {
-    return await api.post(`/workspace/${workspaceId}/activityLog`, data);
+    return await api.post(`/v1/workspace/${workspaceId}/activityLog`, data);
 }
 
 //워크스페이스 룸 정보 조회
 async function WorkspaceRoomInfo(workspaceId: number, roomId: number) {
-    return await api.get(`/workspace/${workspaceId}/message/${roomId}/info`);
+    return await api.get(`/v1/workspace/${workspaceId}/message/${roomId}/info`);
 }
 
 //워크스페이스 멤버 업데이트
 async function WorkspaceMemberUpdate(workspaceId: number, data: WorkspaceMemberCreateRequest) {
-    return await api.patch(`/workspace/${workspaceId}/members`, data);
+    return await api.patch(`/v1/workspace/${workspaceId}/members`, data);
 }
 
 const WorkspaceServer = {

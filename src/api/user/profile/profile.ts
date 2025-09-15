@@ -4,16 +4,16 @@ import Api from "../../Api";
 const ProfileService = {
     // Get user profile by userId
     getProfile: (profileId: number) => {
-        return Api.get(`/user/profile/${profileId}`);
+        return Api.get(`/v1/user/profile/${profileId}`);
     },
 
     // Get current user's profile
     getMe: () => {
-        return Api.get('/user/profile/me');
+        return Api.get('/v1/user/profile/me');
     },
 
     create: (profileId: number, data: FormData) => {
-        return Api.post(`/user/profile/${profileId}`, data, {
+        return Api.post(`/v1/user/profile/${profileId}`, data, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -21,7 +21,7 @@ const ProfileService = {
     },
 
     update: (profileId: number, data: FormData) => {
-        return Api.patch(`/user/profile/${profileId}`, data, {
+        return Api.patch(`/v1/user/profile/${profileId}`, data, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
