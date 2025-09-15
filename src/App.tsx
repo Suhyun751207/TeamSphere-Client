@@ -1,5 +1,6 @@
 import Router from "./router/route";
 import './App.css';
+import ChatModal from './components/ChatModal';
 
 export default function App() {
   return (
@@ -7,6 +8,7 @@ export default function App() {
       <div className="app-content">
         <Router />
       </div>
+      <ChatModal />
     </div>
   )
 }
