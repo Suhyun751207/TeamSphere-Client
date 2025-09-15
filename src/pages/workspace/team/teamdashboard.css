@@ -494,7 +494,6 @@
 }
 
 .teamDashboard-task-card:hover {
-    transform: translateY(-1px);
     box-shadow: var(--shadow);
     border-color: var(--primary);
 }

@@ -882,15 +882,6 @@ export default function TeamDashboard() {
                                                                     rows={3}
                                                                 />
                                                             </div>
-                                                            <div className="teamDashboard-form-group">
-                                                                <label>태그 (쉼표로 구분)</label>
-                                                                <input
-                                                                    type="text"
-                                                                    value={childTaskFormData.tags.join(', ')}
-                                                                    onChange={(e) => setChildTaskFormData({ ...childTaskFormData, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
-                                                                    placeholder="태그1, 태그2, 태그3"
-                                                                />
-                                                            </div>
                                                             <div className="teamDashboard-form-actions">
                                                                 <button
                                                                     className="teamDashboard-btn-primary"
