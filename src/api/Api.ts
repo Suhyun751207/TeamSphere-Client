@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const URL = process.env.REACT_APP_SERVER_URL || "https://teamsphere-server-production.up.railway.app/";
-console.log("server url", URL)
 const api = axios.create({
     baseURL: URL,
     withCredentials: true,
