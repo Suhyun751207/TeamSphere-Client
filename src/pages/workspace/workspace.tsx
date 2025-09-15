@@ -278,7 +278,6 @@ function Workspace() {
                 try {
                     // Find workspace member by activity log userId (which matches workspaceMember id)
                     const workspaceMember = workspaceMembers.find((member: any) => member.id === log.userId);
-                    console.log(workspaceMember)
                     if (workspaceMember && workspaceMember.user && workspaceMember.profile) {
                         return {
                             ...log,
