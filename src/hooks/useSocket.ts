@@ -73,7 +73,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     try {
       const response = await ProfileServer.getToken();
       if (response?.data?.token) {
-        console.log('✅ Token retrieved from API endpoint');
         // 캐시 업데이트
         tokenCacheRef.current = {
           token: response.data.token,
@@ -91,7 +90,6 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'token' || name === 'authToken' || name === 'accessToken' || name === 'accesstoken' || name === 'jwt') {
-        console.log('✅ Token found in cookies:', name);
         const token = decodeURIComponent(value);
         // 캐시 업데이트
         tokenCacheRef.current = {
