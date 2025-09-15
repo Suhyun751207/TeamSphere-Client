@@ -62,6 +62,11 @@ async function WorkspaceMemberAdd(workspaceId: number, data: WorkspaceMemberCrea
 }
 
 
+//워크스페이스 멤버 목록 조회
+async function WorkspaceMembersList(workspaceId: number) {
+    return await api.get(`/v1/workspace/${workspaceId}/members`);
+}
+
 //워크스페이스 활동 로그 조회
 async function WorkspaceActivityLogList(workspaceId: number) {
     return await api.get(`/v1/workspace/${workspaceId}/activityLog`);
@@ -95,6 +100,7 @@ const WorkspaceServer = {
     WorkspaceRoomLastMessageUpdate,
     WorkspaceRoomMemberAdd,
     WorkspaceMemberAdd,
+    WorkspaceMembersList,
     WorkspaceMemberUpdate,
     WorkspaceActivityLogList,
     WorkspaceActivityLogCreate,

@@ -269,24 +269,28 @@ function Workspace() {
             const response = await WorkspaceServer.WorkspaceActivityLogList(Number(workspaceId));
             const logs = response.data || [];
 
-            // Get member profiles from workspace data
-            const profiles = workspaceData.memberProfiles || [];
+            // Get workspace members to find the correct userId for each activity log
+            const membersResponse = await WorkspaceServer.WorkspaceMembersList(Number(workspaceId));
+            const workspaceMembers = membersResponse.data || [];
 
             // Fetch user profiles for each activity log
             const logsWithUsers = logs.map((log: ActivityLog) => {
                 try {
-                    // Find user profile from existing member profiles
-                    const memberProfile = profiles.find((mp: any) => mp.userId === log.userId);
-                    if (memberProfile && memberProfile.profile[0]) {
+                    // Find workspace member by activity log userId (which matches workspaceMember id)
+                    const workspaceMember = workspaceMembers.find((member: any) => member.id === log.userId);
+                    console.log(workspaceMember)
+                    if (workspaceMember && workspaceMember.user && workspaceMember.profile) {
                         return {
                             ...log,
                             user: {
-                                id: log.userId,
-                                name: memberProfile.profile[0].name,
-                                imagePath: memberProfile.profile[0].imagePath
+                                id: workspaceMember.user.id,
+                                name: workspaceMember.profile[0].name,
+                                imagePath: workspaceMember.profile[0].imagePath
                             }
                         };
                     }
+                    
+                    // If no workspace member found, use default values
                     return {
                         ...log,
                         user: {

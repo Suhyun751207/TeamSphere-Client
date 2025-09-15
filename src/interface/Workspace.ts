@@ -56,6 +56,7 @@ export interface ActivityLogsCreate {
 }
 
 export interface ActivityLog {
+    id: number;
     userId: number;
     workspaceId: number;
     message: string;
