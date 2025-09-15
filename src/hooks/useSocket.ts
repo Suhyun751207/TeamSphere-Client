@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import ProfileServer from '../api/user/Profile';
 
 interface UseSocketOptions {
   autoConnect?: boolean;
@@ -45,8 +46,20 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  // Helper function to get token from cookies
-  const getTokenFromCookie = (): string | null => {
+  // Helper function to get token from API and cookies
+  const getTokenFromCookie = async (): Promise<string | null> => {
+    try {
+      // First try to get token from API endpoint
+      const response = await ProfileServer.getToken();
+      if (response?.data?.token) {
+        console.log('✅ Token retrieved from API endpoint');
+        return response.data.token;
+      }
+    } catch (error) {
+      console.log('❌ API token fetch failed, trying cookies:', error);
+    }
+    
+    // Fallback to cookies
     const cookies = document.cookie.split(';');
     
     for (let cookie of cookies) {
@@ -54,24 +67,26 @@ export const useSocket = (options: UseSocketOptions = {}) => {
       
       // Try different possible cookie names
       if (name === 'token' || name === 'authToken' || name === 'accessToken' || name === 'accesstoken' || name === 'jwt') {
+        console.log('✅ Token found in cookies:', name);
         return decodeURIComponent(value);
       }
     }
+    
+    console.log('❌ No token found in API or cookies');
     return null;
   };
 
   // Initialize socket connection
-  const connect = () => {
-    
+  const connect = async () => {
     if (socketRef.current?.connected) {
       return;
     }
 
-    const token = getTokenFromCookie();
+    const token = await getTokenFromCookie();
     
     if (!token) {
-      console.error('❌ No authentication token found in cookies');
-      setConnectionError('No authentication token found in cookies');
+      console.error('❌ No authentication token found');
+      setConnectionError('No authentication token found');
       return;
     }
 
@@ -80,7 +95,9 @@ export const useSocket = (options: UseSocketOptions = {}) => {
         auth: {
           token: token
         },
-        autoConnect: false
+        autoConnect: false,
+        withCredentials: true, // 쿠키 전송을 위해 필수
+        transports: ['websocket', 'polling'] // 웹소켓 우선, 폴링 폴백
       });
 
       // Connection event handlers
@@ -238,11 +255,15 @@ export const useSocket = (options: UseSocketOptions = {}) => {
 
   // Reconnect when token changes
   useEffect(() => {
-    const token = getTokenFromCookie();
-    if (token && !socketRef.current?.connected && autoConnect) {
-      connect();
-    }
-  }, []);
+    const checkTokenAndConnect = async () => {
+      const token = await getTokenFromCookie();
+      if (token && !socketRef.current?.connected && autoConnect) {
+        await connect();
+      }
+    };
+    
+    checkTokenAndConnect();
+  }, [autoConnect, connect, getTokenFromCookie]);
 
   return {
     // Connection state

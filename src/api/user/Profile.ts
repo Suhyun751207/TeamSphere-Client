@@ -17,6 +17,10 @@ async function ProfileUserUpdate(userId: number, data: profilesUpdate) {
     return await api.patch(`/v1/user/profile/${userId}`, data)
 }
 
+async function getToken() {
+    return await api.get("/v1/user/token")
+}
+
 async function getMe() {
     return await api.get("/v1/user/profile/me")
 }
@@ -26,7 +30,8 @@ const ProfileServer = {
     ProfileCreate,
     ProfileUserGet,
     ProfileUserUpdate,
-    getMe
+    getMe,
+    getToken
 }
 
 export default ProfileServer;
