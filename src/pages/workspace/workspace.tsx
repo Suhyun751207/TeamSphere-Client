@@ -1294,16 +1294,18 @@ function Workspace() {
                                                     <span className="member-task-count">
                                                         작업 {taskCount}개
                                                     </span>
-                                                    <button
-                                                        className="remove-member-btn"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleRemoveTeamMember(teamMember.id);
-                                                        }}
-                                                        title="팀에서 제거"
-                                                    >
-                                                        ×
-                                                    </button>
+                                                    {currentUserWorkspaceInfo?.id !== teamMember.memberId && teamMembers.length > 1 && (
+                                                        <button
+                                                            className="remove-member-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRemoveTeamMember(teamMember.id);
+                                                            }}
+                                                            title="팀에서 제거"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         );

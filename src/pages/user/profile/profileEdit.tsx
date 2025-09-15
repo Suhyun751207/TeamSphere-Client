@@ -16,6 +16,13 @@ export default function ProfileEdit() {
     });
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    
+    // 전화번호 분리 상태
+    const [phoneParts, setPhoneParts] = useState({
+        part1: "",
+        part2: "",
+        part3: ""
+    });
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -34,6 +41,18 @@ export default function ProfileEdit() {
                     imagePath: userProfile.imagePath
                 });
 
+                // 전화번호 분리
+                if (userProfile.phone) {
+                    const phoneParts = userProfile.phone.split('-');
+                    if (phoneParts.length === 3) {
+                        setPhoneParts({
+                            part1: phoneParts[0],
+                            part2: phoneParts[1],
+                            part3: phoneParts[2]
+                        });
+                    }
+                }
+
                 if (userProfile.imagePath) {
                     setPreviewUrl(userProfile.imagePath);
                 }
@@ -46,10 +65,61 @@ export default function ProfileEdit() {
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setProfile(prev => ({
+        
+        if (name === 'age') {
+            // 나이는 최대 99까지 제한
+            const ageValue = parseInt(value);
+            if (value === '' || (ageValue >= 0 && ageValue <= 99)) {
+                setProfile(prev => ({
+                    ...prev,
+                    [name]: value === '' ? null : ageValue
+                }));
+            }
+        } else {
+            setProfile(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
+    };
+
+    const handlePhoneChange = (part: 'part1' | 'part2' | 'part3', value: string) => {
+        // 숫자만 허용
+        const numericValue = value.replace(/[^0-9]/g, '');
+        
+        // 각 부분의 최대 길이 제한
+        let maxLength = 4;
+        if (part === 'part1') {
+            maxLength = 4; // 010, 02, 031 등
+        } else if (part === 'part2') {
+            maxLength = 4; // 최대 4자리
+        } else if (part === 'part3') {
+            maxLength = 4; // 최대 4자리
+        }
+        
+        const truncatedValue = numericValue.slice(0, maxLength);
+        
+        setPhoneParts(prev => ({
             ...prev,
-            [name]: value
+            [part]: truncatedValue
         }));
+        
+        // 전화번호 병합하여 profile 상태 업데이트
+        const { part1, part2, part3 } = phoneParts;
+        const updatedParts = { ...phoneParts, [part]: truncatedValue };
+        
+        if (updatedParts.part1 && updatedParts.part2 && updatedParts.part3) {
+            const fullPhone = `${updatedParts.part1}-${updatedParts.part2}-${updatedParts.part3}`;
+            setProfile(prev => ({
+                ...prev,
+                phone: fullPhone
+            }));
+        } else {
+            setProfile(prev => ({
+                ...prev,
+                phone: null
+            }));
+        }
     };
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +198,9 @@ export default function ProfileEdit() {
                         name="age"
                         value={profile.age || ''}
                         onChange={handleInputChange}
+                        min="0"
+                        max="99"
+                        placeholder="0-99"
                     />
                 </div>
 
@@ -148,13 +221,34 @@ export default function ProfileEdit() {
 
                 <div className="form-group">
                     <label htmlFor="phone">Phone</label>
-                    <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={profile.phone || ''}
-                        onChange={handleInputChange}
-                    />
+                    <div className="phone-input-group">
+                        <input
+                            type="text"
+                            className="phone-input"
+                            value={phoneParts.part1}
+                            onChange={(e) => handlePhoneChange('part1', e.target.value)}
+                            placeholder="010"
+                            maxLength={4}
+                        />
+                        <span className="phone-separator">-</span>
+                        <input
+                            type="text"
+                            className="phone-input"
+                            value={phoneParts.part2}
+                            onChange={(e) => handlePhoneChange('part2', e.target.value)}
+                            placeholder="1234"
+                            maxLength={4}
+                        />
+                        <span className="phone-separator">-</span>
+                        <input
+                            type="text"
+                            className="phone-input"
+                            value={phoneParts.part3}
+                            onChange={(e) => handlePhoneChange('part3', e.target.value)}
+                            placeholder="5678"
+                            maxLength={4}
+                        />
+                    </div>
                 </div>
 
                 <div className="button-group">
