@@ -44,7 +44,11 @@ export default function Dashboard() {
             }
         }).catch((error) => {
             console.error("Dashboard data fetch error:", error);
-            setLoading(false);
+            if (error.response && error.response.status === 401) {
+                navigate('/auth/login');
+            } else {
+                setLoading(false);
+            }
         });
 
         checkAttendanceStatus();
