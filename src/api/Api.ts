@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const URL = process.env.REACT_APP_SERVER_URL || "https://teamsphere-server-production.up.railway.app/";
+
 const api = axios.create({
-    baseURL: process.env.REACT_APP_SERVER_URL || "https://teamsphere-server-production.up.railway.app/v1/",
+    baseURL: `${URL}/v1/`,
     withCredentials: true,
     headers: {
         "Content-Type": "application/json"
