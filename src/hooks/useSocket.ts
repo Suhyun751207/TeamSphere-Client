@@ -39,7 +39,7 @@ interface SocketEvents {
 }
 
 export const useSocket = (options: UseSocketOptions = {}) => {
-  const { autoConnect = true, serverPath = 'http://localhost:8080' } = options;
+  const { autoConnect = true, serverPath = 'https://teamsphere-server-production.up.railway.app/v1/' } = options;
   
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
