@@ -43,10 +43,10 @@ export default function Dashboard() {
                 setLoading(false);
             }
         }).catch((error) => {
-            console.error("Dashboard data fetch error:", error);
-            if (error.response && error.response.status === 401) {
+            if (error.message === "Cannot read properties of undefined (reading 'data')") {
                 navigate('/auth/login');
             } else {
+                console.error("Dashboard data fetch error:", error);
                 setLoading(false);
             }
         });
