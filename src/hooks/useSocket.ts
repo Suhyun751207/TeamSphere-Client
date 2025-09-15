@@ -45,34 +45,71 @@ export const useSocket = (options: UseSocketOptions = {}) => {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  
+  // 토큰 캐싱을 위한 ref
+  const tokenCacheRef = useRef<{
+    token: string | null;
+    timestamp: number;
+    isValid: boolean;
+  }>({ 
+    token: null, 
+    timestamp: 0, 
+    isValid: false 
+  });
+  
+  // 캐시 유효 시간 (5분)
+  const CACHE_DURATION = 5 * 60 * 1000;
 
-  // Helper function to get token from API and cookies
-  const getTokenFromCookie = async (): Promise<string | null> => {
+  const getTokenFromCookie = async (forceRefresh: boolean = false): Promise<string | null> => {
+    const now = Date.now();
+    const cache = tokenCacheRef.current;
+    
+    // 캐시가 유효하고 강제 갱신이 아닌 경우 캐시된 토큰 반환
+    if (!forceRefresh && cache.isValid && cache.token && (now - cache.timestamp) < CACHE_DURATION) {
+      console.log('✅ Using cached token');
+      return cache.token;
+    }
+    
     try {
-      // First try to get token from API endpoint
       const response = await ProfileServer.getToken();
       if (response?.data?.token) {
         console.log('✅ Token retrieved from API endpoint');
+        // 캐시 업데이트
+        tokenCacheRef.current = {
+          token: response.data.token,
+          timestamp: now,
+          isValid: true
+        };
         return response.data.token;
       }
     } catch (error) {
       console.log('❌ API token fetch failed, trying cookies:', error);
     }
     
-    // Fallback to cookies
+    // 쿠키에서 토큰 찾기
     const cookies = document.cookie.split(';');
-    
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
-      
-      // Try different possible cookie names
       if (name === 'token' || name === 'authToken' || name === 'accessToken' || name === 'accesstoken' || name === 'jwt') {
         console.log('✅ Token found in cookies:', name);
-        return decodeURIComponent(value);
+        const token = decodeURIComponent(value);
+        // 캐시 업데이트
+        tokenCacheRef.current = {
+          token: token,
+          timestamp: now,
+          isValid: true
+        };
+        return token;
       }
     }
     
     console.log('❌ No token found in API or cookies');
+    // 캐시 무효화
+    tokenCacheRef.current = {
+      token: null,
+      timestamp: now,
+      isValid: false
+    };
     return null;
   };
 
@@ -263,7 +300,14 @@ export const useSocket = (options: UseSocketOptions = {}) => {
     };
     
     checkTokenAndConnect();
-  }, [autoConnect, connect, getTokenFromCookie]);
+    
+    // 주기적으로 토큰 유효성 검사 (30초마다)
+    const intervalId = setInterval(checkTokenAndConnect, 30000);
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [autoConnect]);
 
   return {
     // Connection state
